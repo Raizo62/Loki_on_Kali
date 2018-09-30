@@ -1,0 +1,14 @@
+pyversions=2.7
+
+/usr/lib/pyshared/python2.7/loki_bindings/asleap/asleap.so
+/usr/lib/pyshared/python2.7/loki_bindings/mpls/mplsred.so
+/usr/lib/pyshared/python2.7/loki_bindings/mpls/mplstun.so
+/usr/lib/pyshared/python2.7/loki_bindings/ospfmd5/ospfmd5bf.so
+/usr/lib/pyshared/python2.7/loki_bindings/tcpmd5/tcpmd5.so
+/usr/lib/pyshared/python2.7/loki_bindings/tcpmd5/tcpmd5bf.so
+/usr/share/pyshared/loki_bindings-0.2.egg-info
+/usr/share/pyshared/loki_bindings/__init__.py
+/usr/share/pyshared/loki_bindings/asleap/__init__.py
+/usr/share/pyshared/loki_bindings/mpls/__init__.py
+/usr/share/pyshared/loki_bindings/ospfmd5/__init__.py
+/usr/share/pyshared/loki_bindings/tcpmd5/__init__.py
