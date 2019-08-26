@@ -1,0 +1,12 @@
+pyversions=2.7
+
+/usr/lib/pyshared/python2.7/loki_bindings/asleap.so
+/usr/lib/pyshared/python2.7/loki_bindings/bf.so
+/usr/lib/pyshared/python2.7/loki_bindings/mplsred.so
+/usr/lib/pyshared/python2.7/loki_bindings/mplstun.so
+/usr/lib/pyshared/python2.7/loki_bindings/tcpmd5.so
+/usr/share/pyshared/loki-0.3.0.egg-info
+/usr/share/pyshared/loki.py
+/usr/share/pyshared/loki_bindings-0.3.0.egg-info
+/usr/share/pyshared/loki_bindings/__init__.py
+/usr/share/pyshared/loki_bindings/test_bf.py
