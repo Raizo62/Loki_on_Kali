@@ -3,21 +3,20 @@ Packages to install Loki on Kali Linux. Loki is a python based infrastructure pe
 
 # Installation
 
+## Install needed old packages
+`dpkg -i Needed_Old_Packages/*.deb`
+
 ## Install needed packages
 * with apt :
 
 ```
-apt install multiarch-support # needed by libssl1.0.0
-apt install python-libpcap python-dpkt python-dumbnet python-glade2
+apt install python-dpkt python-dumbnet python-glade2
 ```
 
 * with local packages :
 ```
-dpkg -i Needed_Packages_For_kali-linux-2018.3-amd64/*.deb
+dpkg -i Local_Packages/*.deb
 ```
 
-## Install needed old packages
-`dpkg -i Needed_Old_Packages/*.deb`
-
 ## Install Loki
-`dpkg -i loki_0.2.7-2_amd64.deb`
+`dpkg -i loki_0.3.0-r502-2_amd64.deb`
