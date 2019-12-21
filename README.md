@@ -10,7 +10,7 @@ Packages to install Loki on Kali Linux. Loki is a python based infrastructure pe
 * with apt :
 
 ```
-apt install python-dpkt python-dumbnet python-glade2
+apt install python-dpkt python-glade2
 ```
 
 * with local packages :
