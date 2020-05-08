@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+
+BUILDROOT="/root/"
+SVNPATH="http://c0decafe.de/svn/"
+REPNAME=codename_loki
+PKGNAME=loki
+WORKDIR=$BUILDROOT/loki-build-`date +%F_%H-%M`
+NONRELEASE=`cat<<-EOF
+	build.sh
+	misc
+	test
+	pkg_scripts
+	modules/module_test.py
+	modules/module_snmp.py
+	modules/module_snmp.glade
+	modules/module_802_1X.py
+	modules/module_802_1X.glade
+EOF`
+
+echo "**************************"
+echo "**** creating workdir ****"
+echo "**************************"
+mkdir $WORKDIR
+
+echo "***********************"
+echo "**** exporting svn ****"
+echo "***********************"
+cd $WORKDIR
+REVISION=$(svn export $SVNPATH/$REPNAME/trunk | grep "Exported revision" | cut -d" " -f3 | tr -d .)
+
+echo "****************************************"
+echo -n "**** getting version ... "
+VERSION=$(grep "VERSION =" trunk/src/loki.py | cut -d\" -f2)_r$REVISION
+echo "$VERSION ****"
+echo "****************************************"
+
+if [ -f $BUILDROOT/loki_${VERSION}.rpm ]
+then
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	echo "!!!! pkg found, canceling build !!!!"
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	rm -rf $WORKDIR
+	exit
+fi
+
+echo "**************************************"
+echo "**** writing version to spec file ****"
+echo "**************************************"
+sed -i "s/0.2.7/$VERSION/g" trunk/loki.spec
+
+echo "***********************************"
+echo "**** removing non-release data ****"
+echo "***********************************"
+for i in $NONRELEASE; do
+	echo "deleting $i"
+	rm -rf trunk/$i
+done
+
+echo "*************************"
+echo "**** moving in place ****"
+echo "*************************"
+mv trunk $PKGNAME-$VERSION
+
+echo "***************************"
+echo "**** creating tar file ****"
+echo "***************************"
+tar -cvzf $BUILDROOT/rpmbuild/SOURCES/${PKGNAME}-${VERSION}.tar.gz $PKGNAME-$VERSION
+
+echo "********************************"
+echo "**** building pkg for amd64 ****"
+echo "********************************"
+rpmbuild -ba $PKGNAME-$VERSION/loki.spec
+
+#~ echo "*******************************"
+#~ echo "**** building pkg for i386 ****"
+#~ echo "*******************************"
+#~ rpmbuild -ba --target i386 $PKGNAME-$VERSION/loki.spec
+
+echo "***********************"
+echo "**** uploading pkg ****"
+echo "***********************"
+#curl -T $WORKDIR/loki_${VERSION}-1_i386.deb --basic -u greif:123jackdanielsqwe http://c0decafe.de/cal/
+
+echo "*********************"
+echo "**** cleaning up ****"
+echo "*********************"
+rm -rf $WORKDIR
+rm -f $BUILDROOT/rpmbuild/SOURCES/${PKGNAME}-${VERSION}.tar.gz

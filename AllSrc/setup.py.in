@@ -1,0 +1,228 @@
+# setup.py.in
+# Copyright 2010 Daniel Mende <dmende@ernw.de> 
+
+import os
+
+print("")
+print("***********************************")
+print("*** Checking for python modules ***")
+print("***********************************")
+print("")
+
+if "@USE_GTK@" == "yes":
+    try:
+        import gobject
+    except Exception, e:
+        print("'import gobject' failed:" + str(e))
+        print("******************************************************")
+        print("*** You need the python module 'gobject' installed ***")
+        print("***                See REQUIREMENTS                ***")
+        print("******************************************************")
+
+    try:
+        import pygtk
+        pygtk.require("2.0")
+    except Exception, e:
+        print("'import gobject' failed:" + str(e))
+        print("****************************************************")
+        print("*** You need the python module 'pygtk' installed ***")
+        print("***               See REQUIREMENTS               ***")
+        print("****************************************************")
+
+    try:
+        import gtk
+    except Exception, e:
+        print("'import gtk' failed:" + str(e))
+        print("**************************************************")
+        print("*** You need the python module 'gtk' installed ***")
+        print("***              See REQUIREMENTS              ***")
+        print("**************************************************")
+
+    try:
+        import gtk.glade
+    except Exception, e:
+        print("'import gtk.glade' failed:" + str(e))
+        print("********************************************************")
+        print("*** You need the python module 'gtk.glade' installed ***")
+        print("***                 See REQUIREMENTS                 ***")
+        print("********************************************************")
+
+if "@USE_URWID@" == "yes":
+    try:
+        import urwid
+    except Exception, e:
+        print("'import urwid' failed:" + str(e))
+        print("****************************************************")
+        print("*** You need the python module 'urwid' installed ***")
+        print("***                See REQUIREMENTS              ***")
+        print("****************************************************")
+
+try:
+    import pcap
+except Exception, e:
+    print("'import pcap' failed:" + str(e))
+    print("***************************************************")
+    print("*** You need the python module 'pcap' installed ***")
+    print("***               See REQUIREMENTS              ***")
+    print("***************************************************")
+
+try:
+    import dnet
+except Exception, e:
+    print("'import dnet' failed:" + str(e))
+    print("***************************************************")
+    print("*** You need the python module 'dnet' installed ***")
+    print("***               See REQUIREMENTS              ***")
+    print("***************************************************")
+
+try:
+    import dpkt
+except Exception, e:
+    print("'import dpkt' failed:" + str(e))
+    print("***************************************************")
+    print("*** You need the python module 'dpkt' installed ***")
+    print("***               See REQUIREMENTS              ***")
+    print("***************************************************")
+
+try:
+    import IPy
+except Exception, e:
+    print("'import IPy' failed:" + str(e))
+    print("**************************************************")
+    print("*** You need the python module 'IPy' installed ***")
+    print("***               See REQUIREMENTS             ***")
+    print("**************************************************")
+
+
+from distutils.core import setup, Extension
+from Cython.Build import cythonize
+
+asleap_srcs = [ '@top_srcdir@/loki_bindings/asleap.c', '@top_srcdir@/lib/asleap/asleap.c']
+asleap_incdirs = [ '@top_srcdir@' ]
+asleap_incdirs += [v[2:] for v in '@PCAPINC@'.split() if v.startswith('-I')]
+asleap_incdirs += [v[2:] for v in '@DNETINC@'.split() if v.startswith('-I')]
+asleap_libdirs = [v[2:] for v in '@PCAPLIB@'.split() if v.startswith('-L')]
+asleap_libdirs += [v[2:] for v in '@DNETLIB@'.split() if v.startswith('-L')]
+asleap_libs = [v[2:] for v in '@PCAPLIB@'.split() if v.startswith('-l')]
+asleap_libs += [v[2:] for v in '@DNETLIB@'.split() if v.startswith('-l')]
+asleap_extargs = []
+asleap_extobj = ['@top_srcdir@/lib/asleap/common.o', '@top_srcdir@/lib/asleap/utils.o', '@top_srcdir@/lib/asleap/sha1.o', '@top_srcdir@/lib/asleap/md4.o']
+asleap_extobj += '@LIBS@'.split()
+
+tcpmd5_srcs = [ '@top_srcdir@/loki_bindings/tcpmd5.c' ]
+tcpmd5_incdirs = []
+tcpmd5_libdirs = []
+tcpmd5_libs = []
+tcpmd5_extargs = []
+tcpmd5_extobj = []
+
+mplstun_srcs = [ '@top_srcdir@/loki_bindings/mplstun.c', '@top_srcdir@/lib/mplstun.c' ]
+mplstun_incdirs = [ '@top_srcdir@/include' ]
+mplstun_incdirs += [v[2:] for v in '@PCAPINC@'.split() if v.startswith('-I')]
+mplstun_incdirs += [v[2:] for v in '@DNETINC@'.split() if v.startswith('-I')]
+mplstun_libdirs = [v[2:] for v in '@PCAPLIB@'.split() if v.startswith('-L')]
+mplstun_libdirs += [v[2:] for v in '@DNETLIB@'.split() if v.startswith('-L')]
+mplstun_libs = [v[2:] for v in '@PCAPLIB@'.split() if v.startswith('-l')]
+mplstun_libs += [v[2:] for v in '@DNETLIB@'.split() if v.startswith('-l')]
+mplstun_extargs = []
+mplstun_extargs += '@DEFS@'.replace("\ ", "_").split()
+mplstun_extobj = []
+
+mplsred_srcs = [ '@top_srcdir@/loki_bindings/mplsred.c', '@top_srcdir@/lib/mplsred.c' ]
+mplsred_incdirs = [ '@top_srcdir@/include' ]
+mplsred_incdirs += [v[2:] for v in '@PCAPINC@'.split() if v.startswith('-I')]
+mplsred_incdirs += [v[2:] for v in '@DNETINC@'.split() if v.startswith('-I')]
+mplsred_libdirs = [v[2:] for v in '@PCAPLIB@'.split() if v.startswith('-L')]
+mplsred_libdirs += [v[2:] for v in '@DNETLIB@'.split() if v.startswith('-L')]
+mplsred_libs = [v[2:] for v in '@PCAPLIB@'.split() if v.startswith('-l')]
+mplsred_libs += [v[2:] for v in '@DNETLIB@'.split() if v.startswith('-l')]
+mplsred_extargs = []
+mplsred_extargs += '@DEFS@'.replace("\ ", "_").split()
+mplsred_extobj = []
+
+bf_srcs = [ '@top_srcdir@/loki_bindings/bf.pyx', 
+            '@top_srcdir@/lib/bf.c',
+            '@top_srcdir@/lib/bf/ospf.c',
+            '@top_srcdir@/lib/bf/isis.c',
+            '@top_srcdir@/lib/bf/tacacs.c',
+            '@top_srcdir@/lib/bf/tcpmd5.c',
+            '@top_srcdir@/lib/bf/bfd.c',
+            '@top_srcdir@/lib/algos/md5.c',
+            '@top_srcdir@/lib/algos/hmac_md5.c',
+            '@top_srcdir@/lib/algos/sha1.c',
+            '@top_srcdir@/lib/algos/sha2.c',
+            '@top_srcdir@/lib/algos/hmac_sha2.c' ]
+bf_incdirs = [ '@top_srcdir@/include' ]
+bf_libdirs = [v[2:] for v in '@PTHREAD_LIBS@'.split() if v.startswith('-L')]
+bf_libdirs += [v[2:] for v in '@CRYPTOLIB@'.split() if v.startswith('-L')]
+bf_libs = [v[2:] for v in '@PTHREAD_LIBS@'.split() if v.startswith('-l')]
+bf_libs += [v[2:] for v in '@CRYPTOLIB@'.split() if v.startswith('-l')]
+
+asleap = Extension( 'loki_bindings.asleap',
+                    asleap_srcs,
+                    include_dirs=asleap_incdirs,
+                    library_dirs=asleap_libdirs,
+                    libraries=asleap_libs,
+                    extra_compile_args=asleap_extargs,
+                    extra_objects=asleap_extobj)
+
+tcpmd5 = Extension( 'loki_bindings.tcpmd5',
+                    tcpmd5_srcs,
+                    include_dirs=tcpmd5_incdirs,
+                    library_dirs=tcpmd5_libdirs,
+                    libraries=tcpmd5_libs,
+                    extra_compile_args=tcpmd5_extargs,
+                    extra_objects=tcpmd5_extobj)
+
+mplstun = Extension(    'loki_bindings.mplstun',
+                        mplstun_srcs,
+                        include_dirs=mplstun_incdirs,
+                        library_dirs=mplstun_libdirs,
+                        libraries=mplstun_libs,
+                        extra_compile_args=mplstun_extargs,
+                        extra_objects=mplstun_extobj)
+
+mplsred = Extension(    'loki_bindings.mplsred',
+                        mplsred_srcs,
+                        include_dirs=mplsred_incdirs,
+                        library_dirs=mplsred_libdirs,
+                        libraries=mplsred_libs,
+                        extra_compile_args=mplsred_extargs,
+                        extra_objects=mplsred_extobj)
+
+bf = Extension( 'loki_bindings.bf',
+                bf_srcs,
+                include_dirs=bf_incdirs,
+                library_dirs=bf_libdirs,
+                libraries=bf_libs )
+
+setup(name='loki_bindings',
+      version='@VERSION@',
+      description='',
+      author='Daniel Mende',
+      author_email='dmende@ernw.de',
+      url='http://c0decafe.de',
+      packages=['loki_bindings'],
+      ext_modules=cythonize(bf)
+     )
+
+setup(name='loki_bindings',
+      version='@VERSION@',
+      description='',
+      author='Daniel Mende',
+      author_email='dmende@ernw.de',
+      url='http://c0decafe.de',
+      packages=['loki_bindings'],
+      ext_modules=[asleap, tcpmd5, mplstun, mplsred]
+     )
+     
+os.chdir("./src/")
+
+setup(name='loki',
+      version='@VERSION@',
+      description='',
+      author='Daniel Mende',
+      author_email='dmende@ernw.de',
+      url='http://c0decafe.de',
+      py_modules=["loki"],
+     )

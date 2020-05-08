@@ -1,0 +1,12 @@
+Source: loki
+Section: unknown
+Priority: extra
+Maintainer: c0decafe <bugs@c0decafe.de>
+Build-Depends: debhelper (>= 7), autotools-dev, python-dev, python-support, libpcap-dev, libdumbnet-dev
+Standards-Version: 3.8.3
+Homepage: http://c0decafe.de
+
+Package: loki
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, python-libpcap, python-gtk2, python-dpkt, python-dumbnet, python-ipy, python-dpkt, python-glade2, python-urwid
+Description: This is loki. have phun!!!11

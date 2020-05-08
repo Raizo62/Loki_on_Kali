@@ -1,0 +1,41 @@
+Requirements (versions are tested ones):
+
+python      2.6.5, 2.6.4, 2.6.2	    http://www.python.org/
+
+pygobject   2.20.0, 2.18.0, 2.16.1	http://www.pygtk.org/
+pygtk       2.16.0, 2.14.1  		http://www.pygtk.org/
+libglade    2.6.4		    http://www.gnome.org
+
+urwid       1.1.0           http://urwid.org/
+
+dnet        1.11		    http://libdnet.sourceforge.net/
+pylibpcap   0.5.1		    http://sourceforge.net/projects/pylibpcap/
+dpkt        1.6             http://code.google.com/p/dpkt/
+ipy         0.70, 0.64		http://software.inl.fr/trac/trac.cgi/wiki/IPy http://pypi.python.org/pypi/IPy
+
+
+for IS-IS / OSPF topology displaing also needed:
+
+pygraphviz  1.2             http://pygraphviz.github.io/
+xdot        0.6             https://github.com/vhdirk/xdot.py
+
+
+=== Linux ===
+
+- for firewalling an iptables needs to be installed an in the path
+- rfc2385 support in bgp needs following kernel options
+
+CONFIG_TCP_MD5SIG=y or m
+CONFIG_NETFILTER=y or m
+CONFIG_IP_NF_FILTER=y or m
+CONFIG_IP_NF_TARGET_REJECT=y or m
+
+
+
+=== FreeBSD ===
+
+- rfc2385 support in bgp needs following kernel options
+
+options     IPSEC
+device      crypto
+options     TCP_SIGNATURE

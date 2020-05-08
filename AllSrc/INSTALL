@@ -1,0 +1,11 @@
+# To generate the configure files
+autoreconf -fvi -I m4
+# Now you can configure:
+./configure --prefix=/usr --with-gtk --with-urwid
+# Now you can build:
+make
+# Now you can install the compiled binaries:
+make install
+
+# If you want to deinstall loki:
+make uninstall

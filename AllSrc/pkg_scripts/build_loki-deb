@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+
+BUILDROOT=/root/
+SVNPATH="http://c0decafe.de/svn/"
+REPNAME=codename_loki
+PKGNAME=loki
+WORKDIR=$BUILDROOT/loki-build-`date +%F_%H-%M`
+NONRELEASE=`cat<<-EOF
+	build.sh
+	misc
+	test
+	pkg_scripts
+	modules/module_test.py
+	modules/module_snmp.py
+	modules/module_snmp.glade
+	modules/module_802_1X.py
+	modules/module_802_1X.glade
+EOF`
+
+echo "**************************"
+echo "**** creating workdir ****"
+echo "**************************"
+mkdir $WORKDIR
+
+echo "***********************"
+echo "**** exporting svn ****"
+echo "***********************"
+cd $WORKDIR
+REVISION=$(svn export $SVNPATH/$REPNAME/trunk | grep "Exported revision" | cut -d" " -f3 | tr -d .)
+
+echo "****************************************"
+echo -n "**** getting version ... "
+VERSION=$(grep "VERSION =" trunk/src/loki.py | cut -d\" -f2)-r$REVISION
+echo "$VERSION ****"
+echo "****************************************"
+
+if [ -f $BUILDROOT/loki_${VERSION}-1_amd64.deb ]
+then
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	echo "!!!! pkg found, canceling build !!!!"
+	echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	rm -rf $WORKDIR
+	exit
+fi
+
+echo "**************************************"
+echo "**** writing version to changelog ****"
+echo "**************************************"
+sed -i "s/0.2.7-1/$VERSION-1/g" trunk/debian/changelog
+
+echo "***********************************"
+echo "**** removing non-release data ****"
+echo "***********************************"
+for i in $NONRELEASE; do
+	echo "deleting $i"
+	rm -rf trunk/$i
+done
+
+echo "*************************************************"
+echo "**** replacing dnet with dumbnet in .h files ****"
+echo "*************************************************"
+find trunk -name "*.h" -exec sed -i "s/dnet\.h/dumbnet\.h/g" {} ";"
+
+echo "**************************************************"
+echo "**** replacing dnet with dumbnet in .py files ****"
+echo "**************************************************"
+find trunk -name "*.py" -exec sed -i "s/dnet/dumbnet/g" {} ";"
+sed -i "s/dnet/dumbnet/g" trunk/setup.py.in
+
+echo "*************************"
+echo "**** moving in place ****"
+echo "*************************"
+mv trunk $PKGNAME-$VERSION
+
+echo "***************************"
+echo "**** creating tar file ****"
+echo "***************************"
+tar -cvzf ${PKGNAME}_${VERSION}.orig.tar.gz $PKGNAME-$VERSION
+
+
+echo "********************************"
+echo "**** configuring build root ****"
+echo "********************************"
+cd $PKGNAME-$VERSION
+autoreconf -fvi -I m4
+./configure
+
+echo "********************************"
+echo "**** building pkg for amd64 ****"
+echo "********************************"
+debuild -us -uc
+
+echo "***********************"
+echo "**** uploading pkg ****"
+echo "***********************"
+curl -T $WORKDIR/loki_${VERSION}-1_amd64.deb --basic -u greif:123jackdanielsqwe http://c0decafe.de/cal/
+
+echo "*******************************"
+echo "**** building pkg for i386 ****"
+echo "*******************************"
+debuild -us -uc -ai386
+
+echo "***********************"
+echo "**** uploading pkg ****"
+echo "***********************"
+curl -T $WORKDIR/loki_${VERSION}-1_i386.deb --basic -u greif:123jackdanielsqwe http://c0decafe.de/cal/
+
+echo "*********************"
+echo "**** cleaning up ****"
+echo "*********************"
+mv  $WORKDIR/loki_${VERSION}-1_*.deb $BUILDROOT/
+rm -rf $WORKDIR

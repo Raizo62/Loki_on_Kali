@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+
+SVNPATH="svn+ssh://svn/home/greif/svn/"
+REPNAME=codename_loki
+PKGNAME=loki
+WORKDIR=/home/user/packaging
+NONRELEASE=`cat<<-EOF
+	build.sh
+	misc
+	test
+	debian
+	pkg_scripts
+	modules/module_test.py
+	modules/module_snmp.py
+	modules/module_snmp.glade
+	modules/module_802_1X.py
+	modules/module_802_1X.glade
+EOF`
+
+echo "***********************"
+echo "**** exporting svn ****"
+echo "***********************"
+cd $WORKDIR
+svn export $SVNPATH/$REPNAME/trunk
+
+echo "**************************************"
+echo -n "**** getting version ... "
+VERSION=`grep "VERSION =" trunk/src/loki.py | cut -d\" -f2`
+echo "$VERSION ****"
+echo "**************************************"
+
+echo "***********************************"
+echo "**** removing non-release data ****"
+echo "***********************************"
+for i in $NONRELEASE; do
+	echo "deleting $i"
+	rm -rf trunk/$i
+done
+
+echo "*************************"
+echo "**** moving in place ****"
+echo "*************************"
+mv trunk $PKGNAME-$VERSION
+
+echo "***************************"
+echo "**** creating tar file ****"
+echo "***************************"
+tar -cvzf ${PKGNAME}-${VERSION}.tar.gz $PKGNAME-$VERSION
+
+echo "*****************************"
+echo "**** removing src folder ****"
+echo "*****************************"
+rm -rf $PKGNAME-$VERSION

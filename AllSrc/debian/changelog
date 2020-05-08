@@ -1,0 +1,5 @@
+loki (0.2.7-1) unstable; urgency=low
+
+  * Added new modules and ipv6 support in the base
+
+ -- user <bugs@c0decafe.de>  Thu, 22 Jul 2010 03:27:52 +0200

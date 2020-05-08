@@ -1,0 +1,357 @@
+diff --exclude='*~' --exclude='.*' -I '$Id:' -urN libdnet-1.11.orig/configure.in libdnet-1.11/configure.in
+--- libdnet-1.11.orig/configure.in	2010-02-28 18:08:50.000000000 +0100
++++ libdnet-1.11/configure.in	2010-03-04 16:43:35.000000000 +0100
+@@ -171,12 +171,18 @@
+ 	    net/if_arp.h net/if_dl.h net/pfilt.h \
+ 	    net/pfvar.h net/radix.h net/raw.h net/route.h netinet/in_var.h \
+ 	    net/if_tun.h linux/if_tun.h netinet/ip_fw.h linux/ip_fw.h \
+-	    linux/ip_fwchains.h linux/netfilter_ipv4/ipchains_core.h)
++	    linux/ip_fwchains.h linux/netfilter_ipv4/ipchains_core.h \
++	    iptables.h)
+ 	AC_CHECK_HEADERS(ip_fil_compat.h netinet/ip_fil_compat.h ip_compat.h \
+ 	    netinet/ip_compat.h ip_fil.h netinet/ip_fil.h)
++	AC_CHECK_HEADERS(netdb.h)
+ 	AC_CHECK_HEADERS(hpsecurity.h stropts.h)
+ fi
+ 
++dnl Check for libs.
++AC_CHECK_LIB(iptc, iptc_init)
++AC_CHECK_LIB(xtables, xtables_malloc)
++
+ dnl Checks for typedefs, structures, and compiler characteristics.
+ AC_C_CONST
+ AC_C_INLINE
+@@ -265,6 +271,11 @@
+ 	AC_LIBOBJ([fw-ipchains])
+ elif test "$ac_cv_header_linux_netfilter_ipv4_ipchains_core_h" = yes ; then
+ 	AC_LIBOBJ([fw-ipchains])
++elif test "$ac_cv_header_iptables_h" = yes && \
++	 test "$ac_cv_header_netdb_h" = yes && \
++	 test "$ac_cv_lib_iptc_iptc_init" = yes && \
++	 test "$ac_cv_lib_xtables_xtables_malloc" = yes ; then
++	AC_LIBOBJ([fw-iptables])
+ else
+ 	AC_LIBOBJ([fw-none])
+ fi
+diff --exclude='*~' --exclude='.*' -I '$Id:' -urN libdnet-1.11.orig/python/setup.py.in libdnet-1.11/python/setup.py.in
+--- libdnet-1.11.orig/python/setup.py.in	2010-02-28 18:08:50.000000000 +0100
++++ libdnet-1.11/python/setup.py.in	2010-03-05 10:41:46.000000000 +0100
+@@ -21,6 +21,7 @@
+     #if sys.platform == 'cygwin':
+     #    dnet_extargs.append('-mno-cygwin')
+     dnet_extobj.extend(glob.glob('@top_builddir@/src/.libs/*.o'))
++    dnet_extobj += '@LIBS@'.split()
+ 
+ dnet = Extension('dnet',
+                  dnet_srcs,
+diff --exclude='*~' --exclude='.*' -I '$Id:' -urN libdnet-1.11.orig/src/fw-iptables.c libdnet-1.11/src/fw-iptables.c
+--- libdnet-1.11.orig/src/fw-iptables.c	1970-01-01 01:00:00.000000000 +0100
++++ libdnet-1.11/src/fw-iptables.c	2010-03-08 14:26:03.000000000 +0100
+@@ -0,0 +1,307 @@
++/*
++ * fw-iptables.c
++ * 
++ * Copyright (c) 2010 Daniel Mende <mail@c0decafe.de>
++ *
++ */
++
++#include <stdarg.h>
++#include <errno.h>
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <netdb.h>
++#include <unistd.h>
++#include <dlfcn.h>
++#include <iptables.h>
++
++#include "dnet/eth.h"
++#include "dnet/ip.h"
++#include "dnet/ip6.h"
++#include "dnet/addr.h"
++#include "dnet/intf.h"
++#include "dnet/fw.h"
++
++#ifndef NFPROTO_IPV4
++#define NFPROTO_IPV4 2
++#endif
++
++#define TABLENAME "filter"
++#define ALLOW_TARGET "ALLOW"
++#define BLOCK_TARGET "DROP"
++#define IN_CHAINNAME "INPUT"
++#define OUT_CHAINNAME "OUTPUT"
++
++#define MODARGLEN	1024
++
++struct fw_handle { int foo; };
++
++struct ipt_rule {
++	struct ipt_entry entry;
++	ipt_chainlabel chain;
++	struct xtables_target *target;
++	struct xtables_rule_match *matches;
++};
++
++void dnet_exit_error(enum xtables_exittype status, const char *msg, ...) __attribute__((noreturn, format(printf,2,3)));
++
++void
++dnet_exit_error(enum xtables_exittype status, const char *msg, ...)
++{
++	va_list args;
++
++	va_start(args, msg);
++	vfprintf(stderr, msg, args);
++	va_end(args);
++	fprintf(stderr, "\n");
++	xtables_free_opts(1);
++	exit(status);
++}
++
++struct xtables_globals iptables_globals = {
++	.option_offset = 0,
++	.program_version = IPTABLES_VERSION,
++	.opts = NULL,
++	.orig_opts = NULL,
++	.exit_err = dnet_exit_error,
++};
++
++static struct ipt_entry *
++generate_entry(const struct ipt_entry *fw,
++	       struct xtables_rule_match *matches,
++	       struct ipt_entry_target *target)
++{
++	unsigned int size;
++	struct xtables_rule_match *matchp;
++	struct ipt_entry *e;
++
++	size = sizeof(struct ipt_entry);
++	for (matchp = matches; matchp; matchp = matchp->next)
++		size += matchp->match->m->u.match_size;
++
++	e = xtables_malloc(size + target->u.target_size);
++	*e = *fw;
++	e->target_offset = size;
++	e->next_offset = size + target->u.target_size;
++
++	size = 0;
++	for (matchp = matches; matchp; matchp = matchp->next) {
++		memcpy(e->elems + size, matchp->match->m, matchp->match->m->u.match_size);
++		size += matchp->match->m->u.match_size;
++	}
++	memcpy(e->elems + size, target, target->u.target_size);
++
++	return e;
++}
++
++static unsigned char *
++make_delete_mask(struct ipt_entry *fw, struct xtables_rule_match *matches)
++{
++	/* Establish mask for comparison */
++	unsigned int size;
++	struct xtables_rule_match *matchp;
++	unsigned char *mask, *mptr;
++
++	size = sizeof(struct ipt_entry);
++	for (matchp = matches; matchp; matchp = matchp->next)
++		size += IPT_ALIGN(sizeof(struct ipt_entry_match)) + matchp->match->size;
++
++	mask = xtables_calloc(1, size
++			 + IPT_ALIGN(sizeof(struct ipt_entry_target))
++			 + xtables_targets->size);
++
++	memset(mask, 0xFF, sizeof(struct ipt_entry));
++	mptr = mask + sizeof(struct ipt_entry);
++
++	for (matchp = matches; matchp; matchp = matchp->next) {
++		memset(mptr, 0xFF,
++		       IPT_ALIGN(sizeof(struct ipt_entry_match))
++		       + matchp->match->userspacesize);
++		mptr += IPT_ALIGN(sizeof(struct ipt_entry_match)) + matchp->match->size;
++	}
++
++	memset(mptr, 0xFF,
++	       IPT_ALIGN(sizeof(struct ipt_entry_target))
++	       + xtables_targets->userspacesize);
++
++	return mask;
++}
++
++static void
++fr_to_ipt(const struct fw_rule *fr, struct ipt_rule *ipt)
++{
++	char *jumpto = "";
++	struct xtables_target *target = NULL;
++	unsigned int size;
++	static struct xtables_match *m;
++	struct protoent *pent;
++	char *modarg[3];
++		
++	memset(ipt, 0, sizeof(*ipt));
++	
++	if (fr->fw_dir == FW_DIR_IN)
++		strlcpy(ipt->chain, IN_CHAINNAME, sizeof(ipt->chain));
++	else
++		strlcpy(ipt->chain, OUT_CHAINNAME, sizeof(ipt->chain));
++
++	if (fr->fw_op == FW_OP_ALLOW)
++		jumpto = ALLOW_TARGET;
++	else
++		jumpto = BLOCK_TARGET;
++		
++	xtables_parse_interface(fr->fw_device, ipt->entry.ip.iniface, ipt->entry.ip.iniface_mask);
++	
++	ipt->entry.ip.proto = fr->fw_proto;
++	
++	ipt->entry.ip.src.s_addr = fr->fw_src.addr_ip;
++	ipt->entry.ip.dst.s_addr = fr->fw_dst.addr_ip;
++	addr_btom(fr->fw_src.addr_bits, &ipt->entry.ip.smsk.s_addr, IP_ADDR_LEN);
++	addr_btom(fr->fw_dst.addr_bits, &ipt->entry.ip.dmsk.s_addr, IP_ADDR_LEN);
++	
++
++	if (fr->fw_sport[0] || fr->fw_dport[0]) {
++		pent = getprotobynumber(fr->fw_proto);
++		m = xtables_find_match(pent->p_name, XTF_TRY_LOAD, &ipt->matches);
++		size = IPT_ALIGN(sizeof(struct ipt_entry_match)) + m->size;
++		m->m = xtables_calloc(1, size);
++		m->m->u.match_size = size;
++		strcpy(m->m->u.user.name, m->name);
++		xtables_set_revision(m->m->u.user.name, m->revision);
++		if (m->init != NULL)
++			m->init(m->m);
++		if (fr->fw_sport[0] && fr->fw_sport[1]) {
++			modarg[0] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[0], MODARGLEN, "--sport");
++			modarg[1] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[1], MODARGLEN, "%i:%i", fr->fw_sport[0], fr->fw_sport[1]);
++			getopt(2, modarg, "");
++			optind = 2;
++			m->parse('1', modarg, 0, &m->mflags, &ipt->entry, &m->m);
++			free(modarg[1]);
++			free(modarg[0]);
++		}
++		else if (fr->fw_sport[0] && !fr->fw_sport[1]) {
++			modarg[0] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[0], MODARGLEN, "--sport");
++			modarg[1] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[1], MODARGLEN, "%i", fr->fw_sport[0]);
++			getopt(2, modarg, "");
++			optind = 2;
++			m->parse('1', modarg, 0, &m->mflags, &ipt->entry, &m->m);
++			free(modarg[1]);
++			free(modarg[0]);
++		}
++		if (fr->fw_dport[0] && fr->fw_dport[1]) {
++			modarg[0] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[0], MODARGLEN, "--dport");
++			modarg[1] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[1], MODARGLEN, "%i:%i", fr->fw_dport[0], fr->fw_dport[1]);
++			getopt(2, modarg, "");
++			optind = 2;
++			m->parse('2', modarg, 0, &m->mflags, &ipt->entry, &m->m);
++			free(modarg[1]);
++			free(modarg[0]);
++		}
++		else if (fr->fw_dport[0] && !fr->fw_dport[1]) {
++			modarg[0] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[0], MODARGLEN, "--dport");
++			modarg[1] = malloc(sizeof(char) * MODARGLEN);
++			snprintf(modarg[1], MODARGLEN, "%i", fr->fw_dport[0]);
++			getopt(2, modarg, "");
++			optind = 2;
++			m->parse('2', modarg, 0, &m->mflags, &ipt->entry, &m->m);
++			free(modarg[1]);
++			free(modarg[0]);
++		}
++		/* XXX - ICMP? - TBD */
++	}
++
++	
++	ipt->target = xtables_find_target(jumpto, XTF_TRY_LOAD);
++	size = IPT_ALIGN(sizeof(struct ipt_entry_target)) + ipt->target->size;
++	ipt->target->t = xtables_calloc(1, size);
++	ipt->target->t->u.target_size = size;
++	strlcpy(ipt->target->t->u.user.name, jumpto, sizeof(ipt->target->t->u.user.name));
++	xtables_set_revision(ipt->target->t->u.user.name, ipt->target->revision);
++	if (ipt->target->init != NULL)
++		ipt->target->init(ipt->target->t);
++}
++
++fw_t *
++fw_open(void)
++{
++	dlopen("libxtables.so", RTLD_NOW | RTLD_GLOBAL);
++	
++	/* New handle needed for each commit, so just return not NULL */
++	return malloc(sizeof(struct fw_handle));
++}
++
++int
++fw_add(fw_t *fw, const struct fw_rule *rule)
++{
++	struct iptc_handle *handle;
++	struct ipt_rule ipt;
++	struct ipt_entry *e;
++	
++	xtables_init_all(&iptables_globals, NFPROTO_IPV4);
++	if ((handle = iptc_init(TABLENAME)) == NULL)
++		return -1;
++	
++	fr_to_ipt(rule, &ipt);
++	e = generate_entry(&ipt.entry, ipt.matches, ipt.target->t);
++	free(ipt.target->t);
++	
++	if(!iptc_insert_entry(ipt.chain, e, 0, handle)) {
++		iptc_free(handle);
++		return -1;
++	}
++	if(!iptc_commit(handle)) {
++		iptc_free(handle);
++		return -1;
++	}
++	iptc_free(handle);
++	return 0;
++}
++
++int
++fw_delete(fw_t *fw, const struct fw_rule *rule)
++{
++	struct iptc_handle *handle;
++	struct ipt_rule ipt;
++	unsigned char *mask;
++	struct ipt_entry *e;
++	
++	xtables_init_all(&iptables_globals, NFPROTO_IPV4);
++	if ((handle = iptc_init(TABLENAME)) == NULL)
++		return -1;
++	
++	fr_to_ipt(rule, &ipt);
++	e = generate_entry(&ipt.entry, ipt.matches, ipt.target->t);
++	free(ipt.target->t);
++	mask = make_delete_mask(&ipt.entry, ipt.matches);
++	
++	if(!iptc_delete_entry(ipt.chain, e, mask, handle)) {
++		iptc_free(handle);
++		return -1;
++	}
++	if(!iptc_commit(handle)) {
++		iptc_free(handle);
++		return -1;
++	}
++	iptc_free(handle);
++	return 0;
++}
++
++int
++fw_loop(fw_t *fw, fw_handler callback, void *arg)
++{
++	errno = ENOSYS;
++	return -1;
++}
++
++fw_t *
++fw_close(fw_t *fw)
++{
++	free(fw);
++	return NULL;
++}
