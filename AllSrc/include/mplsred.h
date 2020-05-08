@@ -48,7 +48,7 @@
 #include <sys/time.h>
 #endif
 
-#include <dnet.h>
+#include <dumbnet.h>
 #include <pcap.h>
 
 #define MAX_PACKET_LEN 1500

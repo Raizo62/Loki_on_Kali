@@ -81,7 +81,7 @@
 #endif
 
 
-#include <dnet.h>
+#include <dumbnet.h>
 #include <pcap.h>
 
 #define READ_BUFFER_SIZE 1600
