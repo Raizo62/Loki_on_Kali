@@ -32,7 +32,7 @@
 import struct
 import threading
 
-import dnet
+import dumbnet
 
 import gobject
 import gtk
@@ -274,9 +274,9 @@ class mod_class(object):
         return (False, False)
     
     def input_eth(self, eth, timestamp):
-        src = dnet.eth_ntoa(eth.src)
+        src = dumbnet.eth_ntoa(eth.src)
         if src not in self.connection_list:
-            dst = dnet.eth_ntoa(eth.dst)
+            dst = dumbnet.eth_ntoa(eth.dst)
             self.connection_list[src] = connection(self, src, dst)
         hdr = dot1x_header()
         #try:

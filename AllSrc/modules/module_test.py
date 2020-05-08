@@ -31,7 +31,7 @@
 
 import threading
 
-import dnet
+import dumbnet
 
 gobject = None
 gtk = None

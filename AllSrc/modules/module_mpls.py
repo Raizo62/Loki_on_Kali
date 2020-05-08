@@ -36,7 +36,7 @@ import threading
 
 import loki_bindings
 
-import dnet
+import dumbnet
 import dpkt
 
 import gobject
@@ -198,8 +198,8 @@ class mod_class(object):
         return (False, False)
 
     def input_eth(self, eth, timestamp):
-        src = dnet.eth_ntoa(eth.src)
-        dst = dnet.eth_ntoa(eth.dst)
+        src = dumbnet.eth_ntoa(eth.src)
+        dst = dumbnet.eth_ntoa(eth.dst)
         data = eth.data
         src_dst = src + ":" + dst
         if src_dst not in self.peers:

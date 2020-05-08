@@ -67,11 +67,11 @@ except Exception, e:
     print("***************************************************")
 
 try:
-    import dnet
+    import dumbnet
 except Exception, e:
-    print("'import dnet' failed:" + str(e))
+    print("'import dumbnet' failed:" + str(e))
     print("***************************************************")
-    print("*** You need the python module 'dnet' installed ***")
+    print("*** You need the python module 'dumbnet' installed ***")
     print("***               See REQUIREMENTS              ***")
     print("***************************************************")
 

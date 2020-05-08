@@ -39,7 +39,7 @@ import time
 import cmd
 #import md5
 
-import dnet
+import dumbnet
 import dpkt
 import pcap
 
@@ -86,7 +86,7 @@ def ichecksum_func(data, sum=0):
 
 class eigrp_address:
     def __init__(self, addr, len=4):
-        self.addr = dnet.ip_aton(addr)
+        self.addr = dumbnet.ip_aton(addr)
         self.len = len
 
     def render(self):
@@ -222,7 +222,7 @@ class eigrp_internal_route(eigrp_tlv):
     def __init__(self, next_hop = None, delay = None, bandwidth = None, mtu = None, hop_count = None, reliability = None, load = None, prefix = None, dest = None):
         eigrp_tlv.__init__(self, eigrp_tlv.EIGRP_TYPE_INTERNAL_ROUTE)
         if next_hop:
-            self.next_hop = dnet.ip_aton(next_hop)
+            self.next_hop = dumbnet.ip_aton(next_hop)
         else:
             self.next_hop = next_hop
         self.delay = delay
@@ -233,7 +233,7 @@ class eigrp_internal_route(eigrp_tlv):
         self.load = load
         self.prefix = prefix
         if dest:
-            self.dest = dnet.ip_aton(dest)
+            self.dest = dumbnet.ip_aton(dest)
         else:
             self.dest = dest
 
@@ -245,11 +245,11 @@ class eigrp_internal_route(eigrp_tlv):
         return eigrp_tlv.render(self, self.next_hop + struct.pack("!IIIBBxxB", self.delay, self.bandwidth, mtu_and_hop, self.reliability, self.load, self.prefix) + dest)
 
     def parse(self, data):
-        self.next_hop = dnet.ip_ntoa(data[:4])
+        self.next_hop = dumbnet.ip_ntoa(data[:4])
         (self.delay, self.bandwidth, mtu_and_hop, self.reliability, self.load, self.prefix) = struct.unpack("!IIIBBxxB", data[4:21])
         self.mtu = mtu_and_hop >> 8
         self.hop_count = mtu_and_hop & 0x000000ff
-        self.dest = dnet.ip_ntoa(data[21:] + '\0' * (25 - len(data)))
+        self.dest = dumbnet.ip_ntoa(data[21:] + '\0' * (25 - len(data)))
 
 class eigrp_external_route(eigrp_tlv):
     EIGRP_EXTERNAL_PROTO_OSPF = 6
@@ -257,11 +257,11 @@ class eigrp_external_route(eigrp_tlv):
     def __init__(self, next_hop = None, originating_router = None, originating_as = None, arbitrary_tag = None, external_metric = None, external_proto = None, flags = None, delay = None, bandwidth = None, mtu = None, hop_count = None, reliability = None, load = None, prefix = None, dest = None):
         eigrp_tlv.__init__(self, eigrp_tlv.EIGRP_TYPE_EXTERNAL_ROUTE)
         if next_hop:
-            self.next_hop = dnet.ip_aton(next_hop)
+            self.next_hop = dumbnet.ip_aton(next_hop)
         else:
             self.next_hop = next_hop
         if originating_router:
-            self.originating_router = dnet.ip_aton(originating_router)
+            self.originating_router = dumbnet.ip_aton(originating_router)
         else:
             self.originating_router = originating_router
         self.originating_as = originating_as
@@ -277,7 +277,7 @@ class eigrp_external_route(eigrp_tlv):
         self.load = load
         self.prefix = prefix
         if dest:
-            self.dest = dnet.ip_aton(dest)
+            self.dest = dumbnet.ip_aton(dest)
         else:
             self.dest = dest
 
@@ -289,12 +289,12 @@ class eigrp_external_route(eigrp_tlv):
         return eigrp_tlv.render(self, self.next_hop + self.originating_router + struct.pack("!IIIxxBBIIIBBxxB", self.originating_as, self.arbitrary_tag, self.external_metric, self.external_proto, self.flags, self.delay, self.bandwidth, mtu_and_hop, self.reliability, self.load, self.prefix) + dest)
 
     def parse(self, data):
-        self.next_hop = dnet.ip_ntoa(data[:4])
-        self.originating_router = dnet.ip_ntoa(data[4:8])
+        self.next_hop = dumbnet.ip_ntoa(data[:4])
+        self.originating_router = dumbnet.ip_ntoa(data[4:8])
         (self.originating_as, self.arbitrary_tag, self.external_metric, self.external_proto, self.flags, self.delay, self.bandwidth, mtu_and_hop, self.reliability, self.load, self.prefix) = struct.unpack("!IIIxxBBIIIBBxxB", data[8:41])
         self.mtu = mtu_and_hop >> 8
         self.hop_count = mtu_and_hop & 0x000000ff
-        self.dest = dnet.ip_ntoa(data[41:] + '\0' * (45 - len(data)))
+        self.dest = dumbnet.ip_ntoa(data[41:] + '\0' * (45 - len(data)))
 
 ### THREAD_CLASSES ###
 
@@ -311,16 +311,16 @@ class eigrp_hello_thread(threading.Thread):
         ip_hdr = dpkt.ip.IP(    ttl=2,
                                 p=dpkt.ip.IP_PROTO_EIGRP,
                                 src=self.parent.address,
-                                dst=dnet.ip_aton(EIGRP_MULTICAST_ADDRESS),
+                                dst=dumbnet.ip_aton(EIGRP_MULTICAST_ADDRESS),
                                 data=data
                                 )
         ip_hdr.len += len(ip_hdr.data)
-        eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(EIGRP_MULTICAST_MAC),
+        eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(EIGRP_MULTICAST_MAC),
                                             src=self.parent.mac,
                                             type=dpkt.ethernet.ETH_TYPE_IP,
                                             data=str(ip_hdr)
                                             )
-        self.parent.dnet.send(str(eth_hdr))
+        self.parent.dumbnet.send(str(eth_hdr))
 
     def hello(self):
         timer = DEFAULT_HOLD_TIME
@@ -340,16 +340,16 @@ class eigrp_hello_thread(threading.Thread):
                     ip_hdr = dpkt.ip.IP(    ttl=2,
                                             p=dpkt.ip.IP_PROTO_EIGRP,
                                             src=self.parent.spoof,
-                                            dst=dnet.ip_aton(EIGRP_MULTICAST_ADDRESS),
+                                            dst=dumbnet.ip_aton(EIGRP_MULTICAST_ADDRESS),
                                             data=data
                                             )
                     ip_hdr.len += len(ip_hdr.data)
-                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(EIGRP_MULTICAST_MAC),
+                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(EIGRP_MULTICAST_MAC),
                                                         src=self.parent.mac,
                                                         type=dpkt.ethernet.ETH_TYPE_IP,
                                                         data=str(ip_hdr)
                                                         )
-                    self.parent.dnet.send(str(eth_hdr))
+                    self.parent.dumbnet.send(str(eth_hdr))
             timer += 1
             time.sleep(1)
 
@@ -387,7 +387,7 @@ class eigrp_peer(threading.Thread):
                                             type=dpkt.ethernet.ETH_TYPE_IP,
                                             data=str(ip_hdr)
                                             )
-        self.parent.dnet.send(str(eth_hdr))
+        self.parent.dumbnet.send(str(eth_hdr))
 
     def send(self):
         while self.running:
@@ -415,7 +415,7 @@ class eigrp_peer(threading.Thread):
                                                             type=dpkt.ethernet.ETH_TYPE_IP,
                                                             data=str(ip_hdr)
                                                             )
-                        self.parent.dnet.send(str(eth_hdr))
+                        self.parent.dumbnet.send(str(eth_hdr))
                     self.msg = None
                 self.sem.release()
                 time.sleep(0.1)
@@ -439,7 +439,7 @@ class eigrp_peer(threading.Thread):
                         route = eigrp_internal_route()
                         route.parse(tlv.data)
                         if route.next_hop == "0.0.0.0":
-                            route.next_hop = dnet.ip_ntoa(self.peer)
+                            route.next_hop = dumbnet.ip_ntoa(self.peer)
                         route_str = route.dest + "/" + str(route.prefix) + " via " + route.next_hop
                         for i in xrange(self.parent.treestore.iter_n_children(self.iter)):
                             (test_str,) = self.parent.treestore.get(self.parent.treestore.iter_nth_child(self.iter, i), self.parent.TREE_AS_ROW)
@@ -450,7 +450,7 @@ class eigrp_peer(threading.Thread):
                         route = eigrp_external_route()
                         route.parse(tlv.data)
                         if route.next_hop == "0.0.0.0":
-                            route.next_hop = dnet.ip_ntoa(self.peer)
+                            route.next_hop = dumbnet.ip_ntoa(self.peer)
                         route_str = route.dest + "/" + str(route.prefix) + " via " + route.next_hop + " on AS# " + str(route.originating_as) + ", type " + str(route.external_proto)
                         for i in xrange(self.parent.treestore.iter_n_children(self.iter)):
                             (test_str,) = self.parent.treestore.get(self.parent.treestore.iter_nth_child(self.iter, i), self.parent.TREE_AS_ROW)
@@ -464,7 +464,7 @@ class eigrp_peer(threading.Thread):
         self.sem.release()
         
     def run(self):
-        self.iter = self.parent.treestore.append(None, [dnet.ip_ntoa(self.peer), str(self.as_num)])
+        self.iter = self.parent.treestore.append(None, [dumbnet.ip_ntoa(self.peer), str(self.as_num)])
         self.send()
         self.parent.log("EIGRP: Peer " + socket.inet_ntoa(self.peer) + " terminated")
         if self.parent.treestore:
@@ -639,8 +639,8 @@ class mod_class(object):
         return (False, False)
 
     def set_ip(self, ip, mask):
-        self.address = dnet.ip_aton(ip)
-        self.mask = dnet.ip_aton(mask)
+        self.address = dumbnet.ip_aton(ip)
+        self.mask = dumbnet.ip_aton(mask)
 
     def set_fw(self, fw):
         self.fw = fw
@@ -648,23 +648,23 @@ class mod_class(object):
     def set_int(self, interface):
         self.interface = interface
         self.eigrp_filter = {    "device"    : self.interface,
-                                 "op"        : dnet.FW_OP_BLOCK,
-                                 "dir"       : dnet.FW_DIR_IN,
+                                 "op"        : dumbnet.FW_OP_BLOCK,
+                                 "dir"       : dumbnet.FW_DIR_IN,
                                  "proto"     : dpkt.ip.IP_PROTO_EIGRP,
-                                 "src"       : dnet.addr("0.0.0.0/0", dnet.ADDR_TYPE_IP),
-                                 "dst"       : dnet.addr("0.0.0.0/0", dnet.ADDR_TYPE_IP),
+                                 "src"       : dumbnet.addr("0.0.0.0/0", dumbnet.ADDR_TYPE_IP),
+                                 "dst"       : dumbnet.addr("0.0.0.0/0", dumbnet.ADDR_TYPE_IP),
                                  "sport"     : [0, 0],
                                  "dport"     : [0, 0]
                                  }
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     # LISTENING #
 
     def input_ip(self, eth, ip, timestamp):
-        if ip.dst == dnet.ip_aton("224.0.0.10"):
+        if ip.dst == dumbnet.ip_aton("224.0.0.10"):
             if ip.src != self.address and ip.src != self.spoof:
                 self.disp_multicast(str(ip.data), eth.src, ip.src)
             if self.listen_for_auth and ip.src == self.address:
@@ -766,7 +766,7 @@ class mod_class(object):
 
     def on_spoof_togglebutton_toggled(self, btn):
         if btn.get_property("active"):
-            self.spoof = dnet.ip_aton(self.spoof_entry.get_text())
+            self.spoof = dumbnet.ip_aton(self.spoof_entry.get_text())
             self.spoof_entry.set_property("sensitive", False)
         else:
             self.spoof_entry.set_property("sensitive", True)
@@ -780,7 +780,7 @@ class mod_class(object):
             if not parent:
                 parent = model.get_iter(paths[0])
             host = model.get_value(parent, self.TREE_HOST_ROW)
-            peer = dnet.ip_aton(host)
+            peer = dumbnet.ip_aton(host)
             self.peers[peer].msg = None
             self.goodbye_thread = eigrp_goodbye(self, peer, self.peers[peer].as_num)
             self.goodbye_label.set_label("Sending Goodbye Messages to %s..." % (host))
@@ -798,11 +798,11 @@ class mod_class(object):
         if ret == gtk.RESPONSE_OK:
             try:
                 peer = entry.get_text()
-                arp = dnet.arp()
-                mac = arp.get(dnet.addr(peer))
+                arp = dumbnet.arp()
+                mac = arp.get(dumbnet.addr(peer))
                 if not mac:
                     raise Exception("Unable to get mac address")
-                self.add_peer(mac.data, dnet.ip_aton(peer), int(self.as_spinbutton.get_value()))
+                self.add_peer(mac.data, dumbnet.ip_aton(peer), int(self.as_spinbutton.get_value()))
             except Exception, e:
                 self.log("EIGRP: Cant add peer %s: %s" % (peer, e))
 
@@ -814,7 +814,7 @@ class mod_class(object):
             if not parent:
                 parent = model.get_iter(i)
             host = model.get_value(parent, self.TREE_HOST_ROW)
-            peer = dnet.ip_aton(host)
+            peer = dumbnet.ip_aton(host)
             self.peers[peer].quit()
 
     def on_clear_button_clicked(self, data):
@@ -883,22 +883,22 @@ class mod_class(object):
                 parent = model.get_iter(i)
             host = model.get_value(parent, self.TREE_HOST_ROW)
             self.log("EIGRP: Sending update to %s" % (host))
-            peer = dnet.ip_aton(host)
+            peer = dumbnet.ip_aton(host)
             self.peers[peer].update(msg)
         #~ #bcast
         #~ ip_hdr = dpkt.ip.IP(    ttl=2,
                                 #~ p=dpkt.ip.IP_PROTO_EIGRP,
                                 #~ src=self.address,
-                                #~ dst=dnet.ip_aton(EIGRP_MULTICAST_ADDRESS),
+                                #~ dst=dumbnet.ip_aton(EIGRP_MULTICAST_ADDRESS),
                                 #~ data=msg.render()
                                 #~ )
         #~ ip_hdr.len += len(ip_hdr.data)
-        #~ eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(EIGRP_MULTICAST_MAC),
+        #~ eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(EIGRP_MULTICAST_MAC),
                                             #~ src=self.mac,
                                             #~ type=dpkt.ethernet.ETH_TYPE_IP,
                                             #~ data=str(ip_hdr)
                                             #~ )
-        #~ self.dnet.send(str(eth_hdr))
+        #~ self.dumbnet.send(str(eth_hdr))
         
     def on_stop_button_clicked(self, data):
         self.goodbye_thread.quit()

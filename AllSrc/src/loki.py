@@ -46,7 +46,7 @@ import struct
 import ConfigParser
 
 import dpkt
-import dnet
+import dumbnet
 import IPy
 pcap = None
 
@@ -225,13 +225,13 @@ class pcap_thread_offline(pcap_thread):
                     self.parent._print('-'*60)
         self.parent.log("Read thread terminated")
 
-class dnet_thread(threading.Thread):
+class dumbnet_thread(threading.Thread):
     def __init__(self, interface):
         threading.Thread.__init__(self)
         self.interface = interface
         self.sem = threading.Semaphore()
         self.running = True
-        self.eth = dnet.eth(interface)
+        self.eth = dumbnet.eth(interface)
         self.out = None
 
     def run(self):
@@ -256,7 +256,7 @@ class fake_eth(object):
     def get(self):
         return "\x00\x00\x00\x00\x00\x00"
         
-class dnet_thread_offline(object):
+class dumbnet_thread_offline(object):
     def __init__(self):
         self.eth = fake_eth()
     def send(self, data):
@@ -271,7 +271,7 @@ class codename_loki(object):
         self.filename = None
         self.netcfg_configured = False
         self.pcap_thread = None
-        self.dnet_thread = None
+        self.dumbnet_thread = None
         self.fw = None
         self.data_dir = DATA_DIR
         self.devices = {}
@@ -457,11 +457,11 @@ class codename_loki(object):
                     self._print(traceback.format_exc())
                     self._print('-'*60)
             try:
-                if "set_dnet" in dir(mod):
-                    if self.dnet_thread:
-                        mod.set_dnet(self.dnet_thread)
+                if "set_dumbnet" in dir(mod):
+                    if self.dumbnet_thread:
+                        mod.set_dumbnet(self.dumbnet_thread)
                     else:
-                        mod.set_dnet(dnet_thread_offline())
+                        mod.set_dumbnet(dumbnet_thread_offline())
                     
             except Exception, e:
                 self._print(e)
@@ -544,7 +544,7 @@ class codename_loki(object):
         devs = pcap.findalldevs()
         for (name, descr, addr, flags) in devs:
             try:
-                test = dnet.eth(name)
+                test = dumbnet.eth(name)
                 mac = test.get()
                 self.devices[name] = { 'mac' : mac, 'ip4' : [], 'ip6' : [], 'descr' : descr, 'flags' : flags }
             except:
@@ -553,7 +553,7 @@ class codename_loki(object):
                 if len(addr) > 1:
                     for (ip, mask, net, gw) in addr:
                         try:
-                            dnet.ip_aton(ip)
+                            dumbnet.ip_aton(ip)
                             addr_dict = {}
                             addr_dict['ip'] = ip
                             addr_dict['mask'] = mask
@@ -563,7 +563,7 @@ class codename_loki(object):
                         except:
                             pass                            
                         try:
-                            dnet.ip6_aton(ip)
+                            dumbnet.ip6_aton(ip)
                             addr_dict = {}
                             addr_dict['ip'] = ip
                             if PLATFORM == "Windows" and mask is None:
@@ -590,8 +590,8 @@ class codename_loki(object):
                 module.shut_mod()
             if self.pcap_thread:
                 self.pcap_thread.quit()
-            if self.dnet_thread:
-                self.dnet_thread.quit()
+            if self.dumbnet_thread:
+                self.dumbnet_thread.quit()
             if PLATFORM == "Linux" and self.netcfg_configured:
                 self.netcfg.unexecute_l3()
                 self.netcfg.unexecute_l2()

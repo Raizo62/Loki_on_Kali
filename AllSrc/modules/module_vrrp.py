@@ -33,7 +33,7 @@ import struct
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 
 import gobject
@@ -136,25 +136,25 @@ class vrrp_thread(threading.Thread):
             for i in self.parent.peers:
                 (iter, pkg, state, arp) = self.parent.peers[i]
                 if state:
-                    src_mac = dnet.eth_aton("00:00:5e:00:01:%02x" % (pkg.id))
+                    src_mac = dumbnet.eth_aton("00:00:5e:00:01:%02x" % (pkg.id))
                     vrrp = vrrp_packet(pkg.id, 255, pkg.auth_type, pkg.auth_data, 1, pkg.ips)
                     data = vrrp.render()
                     ip_hdr = dpkt.ip.IP(    ttl=255,
                                             p=dpkt.ip.IP_PROTO_VRRP,
                                             src=self.parent.ip,
-                                            dst=dnet.ip_aton(VRRP_MULTICAST_ADDRESS),
+                                            dst=dumbnet.ip_aton(VRRP_MULTICAST_ADDRESS),
                                             data=data
                                             )
                     ip_hdr.len += len(ip_hdr.data)
-                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(VRRP_MULTICAST_MAC),
+                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(VRRP_MULTICAST_MAC),
                                                         src=src_mac,
                                                         type=dpkt.ethernet.ETH_TYPE_IP,
                                                         data=str(ip_hdr)
                                                         )
-                    self.parent.dnet.send(str(eth_hdr))
+                    self.parent.dumbnet.send(str(eth_hdr))
                     if arp:
-                        brdc_mac = dnet.eth_aton("ff:ff:ff:ff:ff:ff")
-                        stp_uplf_mac = dnet.eth_aton("01:00:0c:cd:cd:cd")
+                        brdc_mac = dumbnet.eth_aton("ff:ff:ff:ff:ff:ff")
+                        stp_uplf_mac = dumbnet.eth_aton("01:00:0c:cd:cd:cd")
                         src_mac = self.parent.mac
                         for j in pkg.ips:
                             arp_hdr = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
@@ -170,7 +170,7 @@ class vrrp_thread(threading.Thread):
                                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                                 data=str(arp_hdr)
                                                                 )
-                            self.parent.dnet.send(str(eth_hdr))
+                            self.parent.dumbnet.send(str(eth_hdr))
 
                             arp_hdr = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                                 pro=dpkt.arp.ARP_PRO_IP,
@@ -185,7 +185,7 @@ class vrrp_thread(threading.Thread):
                                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                                 data=str(arp_hdr)
                                                                 )
-                            self.parent.dnet.send(str(eth_hdr))
+                            self.parent.dumbnet.send(str(eth_hdr))
                         self.parent.peers[i] = (iter, pkg, state, arp - 1)
             time.sleep(1)
         self.parent.log("VRRP: Thread terminated")
@@ -272,11 +272,11 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     def get_ip_checks(self):
         return (self.check_ip, self.input_ip)
@@ -293,10 +293,10 @@ class mod_class(object):
             if ip.src not in self.peers:
                 pkg = vrrp_packet()
                 pkg.parse(str(ip.data))
-                src = dnet.ip_ntoa(ip.src)
+                src = dumbnet.ip_ntoa(ip.src)
                 ips = []
                 for i in pkg.ips:
-                    ips.append(dnet.ip_ntoa(i))
+                    ips.append(dumbnet.ip_ntoa(i))
                 iter = self.liststore.append([src, " ".join(ips), pkg.id, pkg.prio, "Seen"])
                 self.peers[ip.src] = (iter, pkg, False, False)
                 self.log("VRRP: Got new peer %s" % (src))
@@ -308,7 +308,7 @@ class mod_class(object):
         (model, paths) = select.get_selected_rows()
         for i in paths:
             iter = model.get_iter(i)
-            peer = dnet.ip_aton(model.get_value(iter, self.LIST_SRC_ROW))
+            peer = dumbnet.ip_aton(model.get_value(iter, self.LIST_SRC_ROW))
             (iter, pkg, run, arp) = self.peers[peer]
             if self.arp_checkbutton.get_active():
                 arp = 3
@@ -324,7 +324,7 @@ class mod_class(object):
         (model, paths) = select.get_selected_rows()
         for i in paths:
             iter = model.get_iter(i)
-            peer = dnet.ip_aton(model.get_value(iter, self.LIST_SRC_ROW))
+            peer = dumbnet.ip_aton(model.get_value(iter, self.LIST_SRC_ROW))
             (iter, pkg, run, arp) = self.peers[peer]
             self.peers[peer] = (iter, pkg, False, arp)
             model.set_value(iter, self.LIST_STATE_ROW, "Released")

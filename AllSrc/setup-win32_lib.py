@@ -6,10 +6,10 @@ from distutils.core import setup, Extension
 from Cython.Build import cythonize
 
 #~ mplsred_srcs = [ 'loki_bindings/mpls/mplsred.c', 'lib/mplsred.c' ]
-#~ mplsred_incdirs = [ '.', 'C:\\Users\\greif\\Downloads\\libdnet-1.12\\libdnet-1.12\\include' ]
-#~ mplsred_libs = ['wpcap', 'dnet', 'ws2_32', 'packet', 'iphlpapi']
-#~ mplsred_libdirs = [ 'C:\\Users\\greif\\Downloads\\libdnet-1.11-win32\\libdnet-1.11-win32\\lib',
-                     #~ 'C:\\Users\\greif\\Downloads\\libdnet-1.12\\WpdPack\\Lib' ]
+#~ mplsred_incdirs = [ '.', 'C:\\Users\\greif\\Downloads\\libdumbnet-1.12\\libdumbnet-1.12\\include' ]
+#~ mplsred_libs = ['wpcap', 'dumbnet', 'ws2_32', 'packet', 'iphlpapi']
+#~ mplsred_libdirs = [ 'C:\\Users\\greif\\Downloads\\libdumbnet-1.11-win32\\libdumbnet-1.11-win32\\lib',
+                     #~ 'C:\\Users\\greif\\Downloads\\libdumbnet-1.12\\WpdPack\\Lib' ]
 #~ mplsred_extargs = []
 #~ mplsred_extobj = []
 

@@ -34,7 +34,7 @@ import threading
 import time
 import hashlib
 
-import dnet
+import dumbnet
 import dpkt
 
 gobject = None
@@ -154,20 +154,20 @@ class hsrp_thread(threading.Thread):
                     ip_hdr = dpkt.ip.IP(    ttl=1,
                                             p=dpkt.ip.IP_PROTO_UDP,
                                             src=self.parent.ip,
-                                            dst=dnet.ip_aton(HSRP_MULTICAST_ADDRESS),
+                                            dst=dumbnet.ip_aton(HSRP_MULTICAST_ADDRESS),
                                             data=str(udp_hdr)
                                             )
                     ip_hdr.len += len(ip_hdr.data)
-                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(HSRP_MULTICAST_MAC),
+                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(HSRP_MULTICAST_MAC),
                                                         src=self.parent.mac,
                                                         type=dpkt.ethernet.ETH_TYPE_IP,
                                                         data=str(ip_hdr)
                                                         )
-                    self.parent.dnet.send(str(eth_hdr))
+                    self.parent.dumbnet.send(str(eth_hdr))
                     if self.parent.peers[i]["arp"]:
-                        src_mac = dnet.eth_aton("00:00:0c:07:ac:%02x" % (pkg.group))
-                        brdc_mac = dnet.eth_aton("ff:ff:ff:ff:ff:ff")
-                        stp_uplf_mac = dnet.eth_aton("01:00:0c:cd:cd:cd")
+                        src_mac = dumbnet.eth_aton("00:00:0c:07:ac:%02x" % (pkg.group))
+                        brdc_mac = dumbnet.eth_aton("ff:ff:ff:ff:ff:ff")
+                        stp_uplf_mac = dumbnet.eth_aton("01:00:0c:cd:cd:cd")
                         ip = struct.pack("!I", pkg.ip)
                         arp_hdr = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                             pro=dpkt.arp.ARP_PRO_IP,
@@ -182,7 +182,7 @@ class hsrp_thread(threading.Thread):
                                                             type=dpkt.ethernet.ETH_TYPE_ARP,
                                                             data=str(arp_hdr)
                                                             )
-                        self.parent.dnet.send(str(eth_hdr))
+                        self.parent.dumbnet.send(str(eth_hdr))
 
                         arp_hdr = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                             pro=dpkt.arp.ARP_PRO_IP,
@@ -197,7 +197,7 @@ class hsrp_thread(threading.Thread):
                                                             type=dpkt.ethernet.ETH_TYPE_ARP,
                                                             data=str(arp_hdr)
                                                             )
-                        self.parent.dnet.send(str(eth_hdr))
+                        self.parent.dumbnet.send(str(eth_hdr))
                         self.parent.peers[i]["arp"] = self.parent.peers[i]["arp"] - 1
             time.sleep(1)
         self.parent.log("HSRP: Thread terminated")
@@ -328,11 +328,11 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     def get_udp_checks(self):
         return (self.check_udp, self.input_udp)
@@ -353,15 +353,15 @@ class mod_class(object):
                 if len(data) >= 30:
                     auth = hsrp_auth_tlv()
                     auth.parse(data)
-                src = dnet.ip_ntoa(ip.src)
+                src = dumbnet.ip_ntoa(ip.src)
                 if not auth is None:
                     auth_str = "MD5: %s key#%d" % (auth.csum.encode("hex"), auth.keyid)
                 else:
                     auth_str = pkg.auth_data
                 if self.ui == 'gtk':
-                    iter = self.liststore.append([src, dnet.ip_ntoa(pkg.ip), pkg.prio, "Seen", auth_str])
+                    iter = self.liststore.append([src, dumbnet.ip_ntoa(pkg.ip), pkg.prio, "Seen", auth_str])
                 elif self.ui == 'urw':
-                    label = "%s - %s PRIO(%d) AUTH(%s)" % (src, dnet.ip_ntoa(pkg.ip), pkg.prio, auth_str)
+                    label = "%s - %s PRIO(%d) AUTH(%s)" % (src, dumbnet.ip_ntoa(pkg.ip), pkg.prio, auth_str)
                     self.hostlist.append(self.parent.menu_button(label + " - Seen", self.urw_hostlist_activated, (ip.src, label)))
                     iter = None
                 self.peers[ip.src] = {
@@ -380,7 +380,7 @@ class mod_class(object):
         (model, paths) = select.get_selected_rows()
         for i in paths:
             iter = model.get_iter(i)
-            peer = dnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
+            peer = dumbnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
             if self.arp_checkbutton.get_active():
                 arp = 3
             else:
@@ -396,7 +396,7 @@ class mod_class(object):
         (model, paths) = select.get_selected_rows()
         for i in paths:
             iter = model.get_iter(i)
-            peer = dnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
+            peer = dumbnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
             self.peers[peer]["state"] = False
             model.set_value(iter, self.STORE_STATE_ROW, "Released")
 

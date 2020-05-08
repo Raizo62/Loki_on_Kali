@@ -35,7 +35,7 @@ import threading
 import time
 
 import dpkt
-import dnet
+import dumbnet
 
 gobject = None
 gtk = None
@@ -179,8 +179,8 @@ class mod_class(object):
         opts = dpkt.tcp.parse_opts(tcp.opts)
         for (opt, data) in opts:
             if opt == dpkt.tcp.TCP_OPT_MD5:
-                src = dnet.ip_ntoa(ip.src)
-                dst = dnet.ip_ntoa(ip.dst)
+                src = dumbnet.ip_ntoa(ip.src)
+                dst = dumbnet.ip_ntoa(ip.dst)
                 ident = "%s:%i->%s:%i" % (src, tcp.sport, dst, tcp.dport)
                 if ident not in self.opts:
                     if self.ui == 'gtk':

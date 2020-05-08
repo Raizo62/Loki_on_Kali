@@ -50,7 +50,7 @@ import re
 import ConfigParser
 
 import dpkt
-import dnet
+import dumbnet
 import IPy
 
 import loki
@@ -764,9 +764,9 @@ class loki_urw(loki.codename_loki):
             if self.pcap_thread:
                 self.pcap_thread.quit()
                 self.pcap_thread = None
-            if self.dnet_thread:
-                self.dnet_thread.quit()
-                self.dnet_thread = None
+            if self.dumbnet_thread:
+                self.dumbnet_thread.quit()
+                self.dumbnet_thread = None
             self.configured = False
         elif not self.filename is None:
             for i in self.modules:
@@ -801,13 +801,13 @@ class loki_urw(loki.codename_loki):
     def run_live(self):
         assert(self.configured)
         self.pcap_thread = loki.pcap_thread(self, self.interface)
-        self.dnet_thread = loki.dnet_thread(self.interface)
+        self.dumbnet_thread = loki.dumbnet_thread(self.interface)
         self.log("Listening on %s" % (self.interface))
         if PLATFORM != "Linux":
-            self.fw = dnet.fw()
+            self.fw = dumbnet.fw()
         for i in self.modules:
             self.start_module(i)
-        self.dnet_thread.start()
+        self.dumbnet_thread.start()
         self.pcap_thread.start()
     
     def run_file(self, filename):

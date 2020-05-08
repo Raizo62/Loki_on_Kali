@@ -42,7 +42,7 @@ import gobject
 import gtk
 import gtk.glade
 
-import dnet
+import dumbnet
 import dpkt
 
 import loki_bindings
@@ -132,24 +132,24 @@ class election_thread(threading.Thread):
     
     def run(self):
         self.parent.log("WLCCP: Election Thread started")
-        header = wlccp_header(0xc1, 0x0, 0x8003, 0x41, 0x0, 0x2800, 0x0, dnet.eth_aton("00:00:00:00:00:00"), 0x2, dnet.eth_aton(self.mac))
+        header = wlccp_header(0xc1, 0x0, 0x8003, 0x41, 0x0, 0x2800, 0x0, dumbnet.eth_aton("00:00:00:00:00:00"), 0x2, dumbnet.eth_aton(self.mac))
         h_data = header.render("%s\x00\x01\x00\x00\xff\x00%s\x00\x00\x00\x00\x00\x02\x00\x00\x00\x05%s%s%s%s%s%s%s%s"
-                    % ( dnet.eth_aton(self.mac),
-                        dnet.eth_aton(self.mac),
+                    % ( dumbnet.eth_aton(self.mac),
+                        dumbnet.eth_aton(self.mac),
                         self.BLOB1,
-                        dnet.eth_aton(self.mac),
-                        dnet.ip_aton(self.ip),
+                        dumbnet.eth_aton(self.mac),
+                        dumbnet.ip_aton(self.ip),
                         self.BLOB2,
-                        dnet.ip_aton(self.ip),
+                        dumbnet.ip_aton(self.ip),
                         self.BLOB3,
                         self.BLOB4,
                         self.BLOB5
                         )  )
-        data = dnet.eth_pack_hdr(dnet.eth_aton(self.WLCCP_DST_MAC), dnet.eth_aton(self.mac), socket.htons(self.WLCCP_ETH_TYPE)) + h_data
+        data = dumbnet.eth_pack_hdr(dumbnet.eth_aton(self.WLCCP_DST_MAC), dumbnet.eth_aton(self.mac), socket.htons(self.WLCCP_ETH_TYPE)) + h_data
         
         while self.running:
-            if self.parent.dnet:
-                self.parent.dnet.send(data)
+            if self.parent.dumbnet:
+                self.parent.dumbnet.send(data)
                 for x in xrange(self.delay):
                     if not self.running:
                         break
@@ -201,7 +201,7 @@ class mod_class(object):
         self.hosts_liststore = gtk.ListStore(str, str, str)
         self.clients_liststore = gtk.ListStore(str, str, str)
         self.comms_treestore = gtk.TreeStore(str, str, str, str)
-        self.dnet = None
+        self.dumbnet = None
         self.election_thread = None
 
     def start_mod(self):
@@ -310,9 +310,9 @@ class mod_class(object):
         self.mask = mask
         self.ip_entry.set_text(self.ip)
 
-    def set_dnet(self, dnet_thread):
-        self.dnet = dnet_thread
-        self.mac = dnet.eth_ntoa(dnet_thread.eth.get())
+    def set_dumbnet(self, dumbnet_thread):
+        self.dumbnet = dumbnet_thread
+        self.mac = dumbnet.eth_ntoa(dumbnet_thread.eth.get())
         self.mac_entry.set_text(self.mac)
 
     def check_eth(self, eth):
@@ -323,8 +323,8 @@ class mod_class(object):
     def input_eth(self, eth, timestamp):
         header = wlccp_header()
         ret = header.parse(eth.data)
-        orig = dnet.eth_ntoa(header.orig_node_mac)
-        dst = dnet.eth_ntoa(header.dst_node_mac)
+        orig = dumbnet.eth_ntoa(header.orig_node_mac)
+        dst = dumbnet.eth_ntoa(header.dst_node_mac)
         if header.msg_type == 0x01:
             #SCM advertisment request
             if not orig == "00:00:00:00:00:00":
@@ -362,13 +362,13 @@ class mod_class(object):
                 #EAP AUTH
                 eap_auth = wlccp_eap_auth()
                 ret = eap_auth.parse(ret)
-                host = dnet.eth_ntoa(eap_auth.requestor_mac)
+                host = dumbnet.eth_ntoa(eap_auth.requestor_mac)
                 if DEBUG:
-                    print "addr %s, type %X @ %s" % (dnet.eth_ntoa(eap_auth.requestor_mac), eap_auth.aaa_msg_type, timestamp)
+                    print "addr %s, type %X @ %s" % (dumbnet.eth_ntoa(eap_auth.requestor_mac), eap_auth.aaa_msg_type, timestamp)
                 if host in self.comms:
                     (iter, leap, leap_pw, nsk, nonces, ctk) = self.comms[host]
                 elif not host == "00:00:00:00:00:00":
-                    iter = self.comms_treestore.append(None, ["%s\n       <=>\n%s" % (dnet.eth_ntoa(header.orig_node_mac), dnet.eth_ntoa(header.dst_node_mac)), self.node_types[eap_auth.requestor_type], "", host])
+                    iter = self.comms_treestore.append(None, ["%s\n       <=>\n%s" % (dumbnet.eth_ntoa(header.orig_node_mac), dumbnet.eth_ntoa(header.dst_node_mac)), self.node_types[eap_auth.requestor_type], "", host])
                     self.comms[host] = (iter, (None, None, None, None), None, None, (None, None, None, None, None, (None, None)), None)
                 (eapol_version, eapol_type, eapol_len) = struct.unpack("!BBH", ret[2:6])
                 ret = ret[6:]
@@ -434,7 +434,7 @@ class mod_class(object):
                     if DEBUG:
                         self.log("WLCCP: fail 1 %X" % eapol_type)
             elif header.msg_type & 0x3f == 0x0c:
-                host = dnet.eth_ntoa(header.orig_node_mac)
+                host = dumbnet.eth_ntoa(header.orig_node_mac)
                 if header.msg_type & 0xc0 == 0x40:
                     #cmPathInit_Reply found
                     if host in self.comms:
@@ -479,7 +479,7 @@ class mod_class(object):
                         self.log("WLCCP: PATH-REQUEST seen for %s" % host)
                         self.comms[host] = (iter, leap, leap_pw, nsk, (supp_node, dst_node, nonces, nonce_repl, counter, mic), ctk)
             elif header.msg_type & 0x3f == 0x09:
-                host = dnet.eth_ntoa(header.orig_node_mac)
+                host = dumbnet.eth_ntoa(header.orig_node_mac)
                 if header.msg_type & 0xc0 == 0x40:
                     #PreRegistration_Reply found
                     if host in self.comms:
@@ -493,11 +493,11 @@ class mod_class(object):
                         id = ret[16:24]
                         (id_type,) = struct.unpack("!H", id[:2])
                         if id_type == self.NODE_TYPE_CLIENT:
-                            client = dnet.eth_ntoa(id[2:])
+                            client = dumbnet.eth_ntoa(id[2:])
                             if client in self.clients:
                                 (iter, org_host, ssid, key_mgmt, ap, crypt, msc, pmk) = self.clients[client]
                                 #get Destination-ID from WLCCP_MN_SECURE_CONTEXT_REQ
-                                ap = dnet.eth_ntoa(ret[10:16])
+                                ap = dumbnet.eth_ntoa(ret[10:16])
                                 crypt = ret[24:contextreq_len]
                                 #skip WLCCP_MN_SECURE_CONTEXT_REPLY
                                 ret = ret[contextreq_len:]
@@ -518,7 +518,7 @@ class mod_class(object):
                             id = ret[16:24]
                             (id_type,) = struct.unpack("!H", id[:2])
                             if id_type == self.NODE_TYPE_CLIENT:
-                                client = dnet.eth_ntoa(id[2:])
+                                client = dumbnet.eth_ntoa(id[2:])
                                 #get key management type
                                 key_mgmt = ret[25:26]
                                 #get ssid len and ssid

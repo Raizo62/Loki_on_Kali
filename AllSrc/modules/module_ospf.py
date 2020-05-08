@@ -38,7 +38,7 @@ import tempfile
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 import IPy
 
@@ -482,7 +482,7 @@ class ospf_link_state_advertisement_header(object):
         self.csum = None
     
     def __repr__(self):
-        return "AGE:%d OPTS:%x TYPE:%s ID:%s ROUTER:%s SEQ:%d" % (self.ls_age, self.options, self.TYPES[self.ls_type], dnet.ip_ntoa(self.ls_id), dnet.ip_ntoa(self.advert_router), self.ls_seq)
+        return "AGE:%d OPTS:%x TYPE:%s ID:%s ROUTER:%s SEQ:%d" % (self.ls_age, self.options, self.TYPES[self.ls_type], dumbnet.ip_ntoa(self.ls_id), dumbnet.ip_ntoa(self.advert_router), self.ls_seq)
 
     def render(self, data):
         if self.csum:
@@ -587,7 +587,7 @@ class ospf_router_link_advertisement_link(object):
         self.tos_n = tos_n
 
     def __repr__(self):
-        return "ID:%s, DATA:%s, TYPE:%s, TOS0:%d" % (dnet.ip_ntoa(self.id), dnet.ip_ntoa(self.data), self.TYPES[self.type], self.tos_0)
+        return "ID:%s, DATA:%s, TYPE:%s, TOS0:%d" % (dumbnet.ip_ntoa(self.id), dumbnet.ip_ntoa(self.data), self.TYPES[self.type], self.tos_0)
 
     def render(self):
         ret = self.id + self.data + struct.pack("!BBH", self.type, len(self.tos_n), self.tos_0)
@@ -763,16 +763,16 @@ class ospf_thread(threading.Thread):
         ip_hdr = dpkt.ip.IP(    ttl=1,
                                 p=dpkt.ip.IP_PROTO_OSPF,
                                 src=self.parent.ip,
-                                dst=dnet.ip_aton("224.0.0.5"),
+                                dst=dumbnet.ip_aton("224.0.0.5"),
                                 data=data
                                 )
         ip_hdr.len += len(ip_hdr.data)
-        eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton("01:00:5e:00:00:05"),
+        eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton("01:00:5e:00:00:05"),
                                             src=self.parent.mac,
                                             type=dpkt.ethernet.ETH_TYPE_IP,
                                             data=str(ip_hdr)
                                             )
-        self.parent.dnet.send(str(eth_hdr))
+        self.parent.dumbnet.send(str(eth_hdr))
 
     def send_unicast(self, mac, ip, data):
         ip_hdr = dpkt.ip.IP(    ttl=1,
@@ -787,7 +787,7 @@ class ospf_thread(threading.Thread):
                                             type=dpkt.ethernet.ETH_TYPE_IP,
                                             data=str(ip_hdr)
                                             )
-        self.parent.dnet.send(str(eth_hdr))
+        self.parent.dumbnet.send(str(eth_hdr))
 
 
 #~ +---+                                         +---+
@@ -828,12 +828,12 @@ class ospf_thread(threading.Thread):
 
     def run(self):
         while(self.running):
-            if self.parent.dnet:
+            if self.parent.dumbnet:
                 if self.hello and len(self.parent.neighbors) > 0:
                     #Build neighbor list
                     neighbors = []
                     for id in self.parent.neighbors:
-                        neighbors.append(dnet.ip_aton(id))
+                        neighbors.append(dumbnet.ip_aton(id))
 
                     if self.state == self.GLOBAL_STATE_INIT:
                         packet = ospf_hello(    self.parent.area,
@@ -991,10 +991,10 @@ class ospf_thread(threading.Thread):
                                     self.parent.neighbors[id] = (iter, mac, ip, dbd, [], state, False, seq, last_packet, adverts)
                             else:
                                 #LSUpdate
-                                ipy = IPy.IP("%s/%s" % (dnet.ip_ntoa(self.parent.ip), dnet.ip_ntoa(self.parent.mask)), make_net=True)
+                                ipy = IPy.IP("%s/%s" % (dumbnet.ip_ntoa(self.parent.ip), dumbnet.ip_ntoa(self.parent.mask)), make_net=True)
                                 links = [ 
-                                            #~ ospf_router_link_advertisement_link(  dnet.ip_aton(str(ipy.net())),
-                                                                                #~ dnet.ip_aton(str(ipy.netmask())),
+                                            #~ ospf_router_link_advertisement_link(  dumbnet.ip_aton(str(ipy.net())),
+                                                                                #~ dumbnet.ip_aton(str(ipy.netmask())),
                                                                                 #~ ospf_router_link_advertisement_link.TYPE_TRANSIT_NET,
                                                                                 #~ 1
                                                                                 #~ ),
@@ -1029,8 +1029,8 @@ class ospf_thread(threading.Thread):
                                 if active:
                                     def router_links(self, net, mask, mac, ip):
                                         links = [   
-                                                    ospf_router_link_advertisement_link(    dnet.ip_aton(net),
-                                                                                            dnet.ip_aton(mask),
+                                                    ospf_router_link_advertisement_link(    dumbnet.ip_aton(net),
+                                                                                            dumbnet.ip_aton(mask),
                                                                                             ospf_router_link_advertisement_link.TYPE_STUB_NET,
                                                                                             1
                                                                                             ),
@@ -1055,7 +1055,7 @@ class ospf_thread(threading.Thread):
                                                                             advert,
                                                                             )
                                         self.send_unicast(mac, ip, packet.render())
-                                        self.parent.log("OSPF: Sending ROUTER_LINKS LSU to %s" % (dnet.ip_ntoa(ip)))
+                                        self.parent.log("OSPF: Sending ROUTER_LINKS LSU to %s" % (dumbnet.ip_ntoa(ip)))
 
                                     def network_links(self, net, mask, mac, ip):
                                         pass
@@ -1243,7 +1243,7 @@ class mod_class(object):
                 if i.startswith("TYPE_"):
                     val = getattr(h, i)
                     self.net_type_liststore.append([i, val])
-        self.dnet = None
+        self.dumbnet = None
         self.filter = False
         self.thread = None
         self.bf = None
@@ -1479,12 +1479,12 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
-        self.mask = dnet.ip_aton(mask)
+        self.ip = dumbnet.ip_aton(ip)
+        self.mask = dumbnet.ip_aton(mask)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     def set_fw(self, fw):
         self.fw = fw
@@ -1492,11 +1492,11 @@ class mod_class(object):
     def set_int(self, interface):
         self.interface = interface
         self.ospf_filter = {    "device"    : self.interface,
-                                "op"        : dnet.FW_OP_BLOCK,
-                                "dir"       : dnet.FW_DIR_IN,
+                                "op"        : dumbnet.FW_OP_BLOCK,
+                                "dir"       : dumbnet.FW_DIR_IN,
                                 "proto"     : dpkt.ip.IP_PROTO_OSPF,
-                                "src"       : dnet.addr("0.0.0.0/0", dnet.ADDR_TYPE_IP),
-                                "dst"       : dnet.addr("0.0.0.0/0", dnet.ADDR_TYPE_IP),
+                                "src"       : dumbnet.addr("0.0.0.0/0", dumbnet.ADDR_TYPE_IP),
+                                "dst"       : dumbnet.addr("0.0.0.0/0", dumbnet.ADDR_TYPE_IP),
                                 "sport"     : [0, 0],
                                 "dport"     : [0, 0]
                                 }
@@ -1512,11 +1512,11 @@ class mod_class(object):
     def input_ip(self, eth, ip, timestamp):
         if ip.src != self.ip:
             #Multicast packet
-            if ip.dst == dnet.ip_aton("224.0.0.5"):
+            if ip.dst == dumbnet.ip_aton("224.0.0.5"):
                 header = ospf_header()
                 data = str(ip.data)
                 header.parse(data[:24])
-                id = dnet.ip_ntoa(header.id)
+                id = dumbnet.ip_ntoa(header.id)
                 if header.type == ospf_header.TYPE_HELLO:
                     hello = ospf_hello()
                     hello.parse(data)
@@ -1530,11 +1530,11 @@ class mod_class(object):
                         else:
                             master = False
                             #self.log("OSPF-DEBUG: No")
-                        #print "Local %s (%i) - Peer %s (%i) => Master " % (dnet.ip_ntoa(self.ip), socket.ntohl(ip_int), id, socket.ntohl(header.id)) + str(master)
+                        #print "Local %s (%i) - Peer %s (%i) => Master " % (dumbnet.ip_ntoa(self.ip), socket.ntohl(ip_int), id, socket.ntohl(header.id)) + str(master)
                         if self.ui == 'gtk':
-                            iter = self.neighbor_liststore.append(None, [dnet.ip_ntoa(ip.src), id, str(header.area), "HELLO", header.auth_to_string(), "", master])
+                            iter = self.neighbor_liststore.append(None, [dumbnet.ip_ntoa(ip.src), id, str(header.area), "HELLO", header.auth_to_string(), "", master])
                         elif self.ui == 'urw':
-                            entry = { 'src'   : dnet.ip_ntoa(ip.src),
+                            entry = { 'src'   : dumbnet.ip_ntoa(ip.src),
                                       'id'    : id,
                                       'area'  : str(header.area),
                                       'state' : "HELLO",
@@ -1547,7 +1547,7 @@ class mod_class(object):
                             self.urw_update_tree()
                         #                    (iter, mac,     src,    dbd, lsa, state,                   master, seq,  last_packet, adverts)
                         self.neighbors[id] = (iter, eth.src, ip.src, None, [], ospf_thread.STATE_HELLO, master, 1337, ip.data, {})
-                        self.log("OSPF: Got new peer %s" % (dnet.ip_ntoa(ip.src)))
+                        self.log("OSPF: Got new peer %s" % (dumbnet.ip_ntoa(ip.src)))
                     elif self.thread.hello:
                         (iter, mac, src, dbd, lsa, state, master, seq, last_packet, adverts) = self.neighbors[id]
                         if state == ospf_thread.STATE_HELLO:
@@ -1571,24 +1571,24 @@ class mod_class(object):
                             
                         ### ADD LSA'S TO NEIGH-STORE ###
                         for lsa in update.advertisements:
-                            adv_router = dnet.ip_ntoa(lsa.advert_router)
+                            adv_router = dumbnet.ip_ntoa(lsa.advert_router)
                             if adv_router not in self.lsdb:
                                 self.lsdb[adv_router] = {}
                             if lsa.ls_type not in self.lsdb[adv_router]:
                                 self.lsdb[adv_router][lsa.ls_type] = {}
-                            ls_id = dnet.ip_ntoa(lsa.ls_id)
+                            ls_id = dumbnet.ip_ntoa(lsa.ls_id)
                             if ls_id not in self.lsdb[adv_router][lsa.ls_type]:
                                 self.lsdb[adv_router][lsa.ls_type][ls_id] = { 'seq' :   None}
                             if lsa.ls_type == ospf_link_state_advertisement_header.TYPE_ROUTER_LINKS:
                                 for link in lsa.links:
-                                    link_id = dnet.ip_ntoa(link.id)
+                                    link_id = dumbnet.ip_ntoa(link.id)
                                     if link_id not in adverts:
                                         if self.ui == 'gtk':
-                                            iter2 = self.neighbor_liststore.append(iter, ["TYPE_ROUTER_LINKS", link_id, dnet.ip_ntoa(link.data), ospf_router_link_advertisement_link.TYPES[link.type], "", "", None])
+                                            iter2 = self.neighbor_liststore.append(iter, ["TYPE_ROUTER_LINKS", link_id, dumbnet.ip_ntoa(link.data), ospf_router_link_advertisement_link.TYPES[link.type], "", "", None])
                                         elif self.ui == 'urw':
                                             entry = { 'type'     : "TYPE_ROUTER_LINKS",
                                                       'id'       : link_id,
-                                                      'data'     : dnet.ip_ntoa(link.data),
+                                                      'data'     : dumbnet.ip_ntoa(link.data),
                                                       'link-type': ospf_router_link_advertisement_link.TYPES[link.type]
                                                     }
                                             self.neigh_tree['children'][iter]['children'].append(entry)
@@ -1598,11 +1598,11 @@ class mod_class(object):
                                     else:
                                         (iter2, old_link) = adverts[link_id]
                                         if self.ui == 'gtk':
-                                            self.neighbor_liststore.set(iter2, self.NEIGH_AREA_ROW, dnet.ip_ntoa(link.data), self.NEIGH_STATE_ROW, ospf_router_link_advertisement_link.TYPES[link.type])
+                                            self.neighbor_liststore.set(iter2, self.NEIGH_AREA_ROW, dumbnet.ip_ntoa(link.data), self.NEIGH_STATE_ROW, ospf_router_link_advertisement_link.TYPES[link.type])
                                         elif self.ui == 'urw':
                                             entry = { 'type'     : "TYPE_ROUTER_LINKS",
                                                       'id'       : link_id,
-                                                      'data'     : dnet.ip_ntoa(link.data),
+                                                      'data'     : dumbnet.ip_ntoa(link.data),
                                                       'link-type': ospf_router_link_advertisement_link.TYPES[link.type]
                                                     }
                                             self.neigh_tree['children'][iter]['children'][iter2] = entry
@@ -1617,30 +1617,30 @@ class mod_class(object):
                                                                                 'data'  :   {} }
                                 if lsa.ls_type == ospf_link_state_advertisement_header.TYPE_ROUTER_LINKS:
                                     for link in lsa.links:
-                                        link_id = dnet.ip_ntoa(link.id)
+                                        link_id = dumbnet.ip_ntoa(link.id)
                                         self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][link_id] = {
                                                 'type'  :   link.type,
-                                                'data'  :   dnet.ip_ntoa(link.data),
+                                                'data'  :   dumbnet.ip_ntoa(link.data),
                                                 'metric':   link.tos_0
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_NETWORK_LINKS:
-                                    rlist = [ dnet.ip_ntoa(i) for i in lsa.router ]
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] ={
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask),
+                                    rlist = [ dumbnet.ip_ntoa(i) for i in lsa.router ]
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] ={
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask),
                                                 'router':   set(rlist)
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_SUMMARY_LINK_IP:
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] = {
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask)
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] = {
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask)
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_SUMMARY_LINK_ASBR:
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] = {
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask)
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] = {
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask)
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_AS_EXTERNAL:
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] = {
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask),
-                                                'fwd'   :   dnet.ip_ntoa(lsa.forward_addr)
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] = {
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask),
+                                                'fwd'   :   dumbnet.ip_ntoa(lsa.forward_addr)
                                             }
                             self.neighbors[id] = (iter, mac, src, org_dbd, update.advertisements, state, master, seq, ip.data, adverts)
             #Unicast packet
@@ -1648,7 +1648,7 @@ class mod_class(object):
                 header = ospf_header()
                 data = str(ip.data)
                 header.parse(data[:24])
-                id = dnet.ip_ntoa(header.id)
+                id = dumbnet.ip_ntoa(header.id)
                 if id in self.neighbors:
                     (iter, mac, src, org_dbd, lsa, state, master, seq, last_packet, adverts) = self.neighbors[id]
                     if header.type == ospf_header.TYPE_HELLO:
@@ -1716,7 +1716,7 @@ class mod_class(object):
                             elif self.ui == 'urw':
                                 self.neigh_tree['children'][iter]['state'] = "FULL"
                                 self.urw_update_tree()
-                            self.log("OSPF: Peer %s in state FULL" % (dnet.ip_ntoa(ip.src)))
+                            self.log("OSPF: Peer %s in state FULL" % (dumbnet.ip_ntoa(ip.src)))
                     elif header.type == ospf_header.TYPE_LINK_STATE_UPDATE:
                         if state > ospf_thread.STATE_EXSTART:
                             if state < ospf_thread.STATE_LOADING:
@@ -1726,30 +1726,30 @@ class mod_class(object):
                                 elif self.ui == 'urw':
                                     self.neigh_tree['children'][iter]['state'] = "FULL"
                                     self.urw_update_tree()
-                                self.log("OSPF: Peer %s in state FULL" % (dnet.ip_ntoa(ip.src)))
+                                self.log("OSPF: Peer %s in state FULL" % (dumbnet.ip_ntoa(ip.src)))
                         update = ospf_link_state_update()
                         update.parse(data)
                             
                         ### ADD LSA'S TO NEIGH-STORE ###
                         for lsa in update.advertisements:
-                            adv_router = dnet.ip_ntoa(lsa.advert_router)
+                            adv_router = dumbnet.ip_ntoa(lsa.advert_router)
                             if adv_router not in self.lsdb:
                                 self.lsdb[adv_router] = {}
                             if lsa.ls_type not in self.lsdb[adv_router]:
                                 self.lsdb[adv_router][lsa.ls_type] = {}
-                            ls_id = dnet.ip_ntoa(lsa.ls_id)
+                            ls_id = dumbnet.ip_ntoa(lsa.ls_id)
                             if ls_id not in self.lsdb[adv_router][lsa.ls_type]:
                                 self.lsdb[adv_router][lsa.ls_type][ls_id] = { 'seq' :   None}
                             if lsa.ls_type == ospf_link_state_advertisement_header.TYPE_ROUTER_LINKS:
                                 for link in lsa.links:
-                                    link_id = dnet.ip_ntoa(link.id)
+                                    link_id = dumbnet.ip_ntoa(link.id)
                                     if link_id not in adverts:
                                         if self.ui == 'gtk':
-                                            iter2 = self.neighbor_liststore.append(iter, ["TYPE_ROUTER_LINKS", link_id, dnet.ip_ntoa(link.data), ospf_router_link_advertisement_link.TYPES[link.type], "", "", None])
+                                            iter2 = self.neighbor_liststore.append(iter, ["TYPE_ROUTER_LINKS", link_id, dumbnet.ip_ntoa(link.data), ospf_router_link_advertisement_link.TYPES[link.type], "", "", None])
                                         elif self.ui == 'urw':
                                             entry = { 'type'     : "TYPE_ROUTER_LINKS",
                                                       'id'       : link_id,
-                                                      'data'     : dnet.ip_ntoa(link.data),
+                                                      'data'     : dumbnet.ip_ntoa(link.data),
                                                       'link-type': ospf_router_link_advertisement_link.TYPES[link.type]
                                                     }
                                             self.neigh_tree['children'][iter]['children'].append(entry)
@@ -1759,11 +1759,11 @@ class mod_class(object):
                                     else:
                                         (iter2, old_link) = adverts[link_id]
                                         if self.ui == 'gtk':
-                                            self.neighbor_liststore.set(iter2, self.NEIGH_AREA_ROW, dnet.ip_ntoa(link.data), self.NEIGH_STATE_ROW, ospf_router_link_advertisement_link.TYPES[link.type])
+                                            self.neighbor_liststore.set(iter2, self.NEIGH_AREA_ROW, dumbnet.ip_ntoa(link.data), self.NEIGH_STATE_ROW, ospf_router_link_advertisement_link.TYPES[link.type])
                                         elif self.ui == 'urw':
                                             entry = { 'type'     : "TYPE_ROUTER_LINKS",
                                                       'id'       : link_id,
-                                                      'data'     : dnet.ip_ntoa(link.data),
+                                                      'data'     : dumbnet.ip_ntoa(link.data),
                                                       'link-type': ospf_router_link_advertisement_link.TYPES[link.type]
                                                     }
                                             self.neigh_tree['children'][iter]['children'][iter2] = entry
@@ -1778,30 +1778,30 @@ class mod_class(object):
                                                                                 'data'  :   {} }
                                 if lsa.ls_type == ospf_link_state_advertisement_header.TYPE_ROUTER_LINKS:
                                     for link in lsa.links:
-                                        link_id = dnet.ip_ntoa(link.id)
+                                        link_id = dumbnet.ip_ntoa(link.id)
                                         self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][link_id] = {
                                                 'type'  :   link.type,
-                                                'data'  :   dnet.ip_ntoa(link.data),
+                                                'data'  :   dumbnet.ip_ntoa(link.data),
                                                 'metric':   link.tos_0
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_NETWORK_LINKS:
-                                    rlist = [ dnet.ip_ntoa(i) for i in lsa.router ]
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] ={
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask),
+                                    rlist = [ dumbnet.ip_ntoa(i) for i in lsa.router ]
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] ={
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask),
                                                 'router':   set(rlist)
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_SUMMARY_LINK_IP:
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] = {
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask)
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] = {
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask)
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_SUMMARY_LINK_ASBR:
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] = {
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask)
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] = {
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask)
                                             }
                                 elif lsa.ls_type == ospf_link_state_advertisement_header.TYPE_AS_EXTERNAL:
-                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dnet.ip_ntoa(lsa.ls_id)] = {
-                                                'mask'  :   dnet.ip_ntoa(lsa.net_mask),
-                                                'fwd'   :   dnet.ip_ntoa(lsa.forward_addr)
+                                    self.lsdb[adv_router][lsa.ls_type][ls_id]['data'][dumbnet.ip_ntoa(lsa.ls_id)] = {
+                                                'mask'  :   dumbnet.ip_ntoa(lsa.net_mask),
+                                                'fwd'   :   dumbnet.ip_ntoa(lsa.forward_addr)
                                             }
                             self.neighbors[id] = (iter, mac, src, org_dbd, update.advertisements, state, master, seq, ip.data, adverts)
 

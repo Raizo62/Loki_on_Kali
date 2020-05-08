@@ -33,7 +33,7 @@ import struct
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 
 import gobject
@@ -157,7 +157,7 @@ class rip_thread(threading.Thread):
                 rlist = []
                 for ip in self.parent.routes:
                     (iter, mask, nh, metrik) = self.parent.routes[ip]
-                    rlist.append(rip_entry(rip_entry.AF_INET, 0, dnet.ip_aton(ip), dnet.ip_aton(mask), dnet.ip_aton(nh), int(metrik)))
+                    rlist.append(rip_entry(rip_entry.AF_INET, 0, dumbnet.ip_aton(ip), dumbnet.ip_aton(mask), dumbnet.ip_aton(nh), int(metrik)))
                 msg = rip_message(rip_message.COMMAND_RESPONSE, rlist)
                 data = msg.render()
                 for dst in self.parent.hosts:
@@ -169,16 +169,16 @@ class rip_thread(threading.Thread):
                     ip_hdr = dpkt.ip.IP(    ttl=2,
                                             p=dpkt.ip.IP_PROTO_UDP,
                                             src=self.parent.ip,
-                                            dst=dnet.ip_aton(RIP_MULTICAST_ADDRESS),
+                                            dst=dumbnet.ip_aton(RIP_MULTICAST_ADDRESS),
                                             data=str(udp_hdr)
                                             )
                     ip_hdr.len += len(ip_hdr.data)
-                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(RIP_MULTICAST_MAC),
+                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(RIP_MULTICAST_MAC),
                                                         src=self.parent.mac,
                                                         type=dpkt.ethernet.ETH_TYPE_IP,
                                                         data=str(ip_hdr)
                                                         )
-                    self.parent.dnet.send(str(eth_hdr))
+                    self.parent.dumbnet.send(str(eth_hdr))
             timer = timer + 1
             time.sleep(1)
         self.parent.log("RIP: Thread terminated")
@@ -278,11 +278,11 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     def get_udp_checks(self):
         return (self.check_udp, self.input_udp)
@@ -293,19 +293,19 @@ class mod_class(object):
         return (False, False)
 
     def input_udp(self, eth, ip, udp, timestamp):
-        if ip.dst == dnet.ip_aton(RIP_MULTICAST_ADDRESS) and ip.src != self.ip:
+        if ip.dst == dumbnet.ip_aton(RIP_MULTICAST_ADDRESS) and ip.src != self.ip:
             if ip.src not in self.hosts:
-                src = dnet.ip_ntoa(ip.src)
+                src = dumbnet.ip_ntoa(ip.src)
                 iter = self.host_treestore.append(None, [src])
                 self.log("RIP: Got new host %s" % (src))
                 self.hosts[ip.src] = (iter, src)
                 msg = rip_message()
                 msg.parse(udp.data)
                 for i in msg.entries:
-                    nh = dnet.ip_ntoa(i.nh)
+                    nh = dumbnet.ip_ntoa(i.nh)
                     if nh == "0.0.0.0":
                         nh = src
-                    self.host_treestore.append(iter, ["%s/%s via %s metric %d" % (dnet.ip_ntoa(i.addr), dnet.ip_ntoa(i.mask), nh, i.metric)])
+                    self.host_treestore.append(iter, ["%s/%s via %s metric %d" % (dumbnet.ip_ntoa(i.addr), dumbnet.ip_ntoa(i.mask), nh, i.metric)])
             else:
                 (iter, src) = self.hosts[ip.src]
                 msg = rip_message(None, [])
@@ -317,10 +317,10 @@ class mod_class(object):
                   self.host_treestore.remove(child)
                   child = self.host_treestore.iter_children(iter)
                 for i in msg.entries:
-                    nh = dnet.ip_ntoa(i.nh)
+                    nh = dumbnet.ip_ntoa(i.nh)
                     if nh == "0.0.0.0":
                         nh = src
-                    self.host_treestore.append(iter, ["%s/%s via %s metric %d" % (dnet.ip_ntoa(i.addr), dnet.ip_ntoa(i.mask), nh, i.metric)])
+                    self.host_treestore.append(iter, ["%s/%s via %s metric %d" % (dumbnet.ip_ntoa(i.addr), dumbnet.ip_ntoa(i.mask), nh, i.metric)])
                 if expanded:
                     self.host_treeview.expand_row(path, False)
     # SIGNALS #

@@ -35,7 +35,7 @@ import time
 
 import dpkt
 import pcap
-import dnet
+import dumbnet
 
 import IPy
 
@@ -53,12 +53,12 @@ class spoof_thread(threading.Thread):
     def run(self):
         self.parent.log("ARP: Spoof thread started")
         while self.running:
-            if self.parent.dnet:
+            if self.parent.dumbnet:
                 for iter in self.parent.spoofs:
                     (run, entry, org_data, hosts) = self.parent.spoofs[iter]
                     if run:
                         for data in entry:
-                            self.parent.dnet.send(data)
+                            self.parent.dumbnet.send(data)
                             time.sleep(0.001)
             for x in xrange(self.parent.spoof_delay):
                 if not self.running:
@@ -71,7 +71,7 @@ class spoof_thread(threading.Thread):
             (run, data, org_data, hosts) = self.parent.spoofs[i]
             if run:
                 for j in org_data:
-                    self.parent.dnet.eth.send(j)
+                    self.parent.dumbnet.eth.send(j)
         self.parent.log("ARP: Spoof thread terminated")
 
     def wakeup(self):
@@ -90,15 +90,15 @@ class flood_thread(threading.Thread):
     def run(self):
         self.parent.log("ARP: Flood thread started")
         while self.running and self.no > 0:
-            if self.parent.dnet:
+            if self.parent.dumbnet:
                 rand_mac = [ 0x00, random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff) ]
                 rand_mac = ':'.join(map(lambda x: "%02x" % x, rand_mac))
-                _eth = dpkt.ethernet.Ethernet(  dst=dnet.ETH_ADDR_BROADCAST,
-                                                src=dnet.eth_aton(rand_mac),
+                _eth = dpkt.ethernet.Ethernet(  dst=dumbnet.ETH_ADDR_BROADCAST,
+                                                src=dumbnet.eth_aton(rand_mac),
                                                 type=0x9000,
                                                 data="\x00\x00\x01\x00\x00\x00" + "\x00" * 40
                                                 )
-                self.parent.dnet.send(str(_eth))
+                self.parent.dumbnet.send(str(_eth))
                 self.no -= 1
             time.sleep(self.parent.flood_delay)
         self.parent.flood_togglebutton.set_active(False)
@@ -214,7 +214,7 @@ class mod_class(object):
                         childclass = SpoofNode_
                     return childclass(childdata, parent=self, key=key, depth=childdepth)
             self.SpoofParentNode = SpoofParentNode_
-        self.dnet = None
+        self.dumbnet = None
         self.spoof_thread = None
         self.flood_thread = None
         self.macs = None
@@ -413,7 +413,7 @@ class mod_class(object):
             if run:
                 self.spoofs[spoof] = (False, data, org_data, hosts)
                 for j in org_data:
-                    self.dnet.eth.send(j)
+                    self.dumbnet.eth.send(j)
             for i in hosts:
                 (ip, rand_mac, iter, reply) = self.hosts[i]
                 self.hosts[i] = (ip, rand_mac, iter, False)
@@ -482,11 +482,11 @@ class mod_class(object):
             self.scan_network_entry.set_text(network)
         elif self.ui == 'urw':
             self.scan_network_edit.set_edit_text(network)
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet_thread):
-        self.dnet = dnet_thread
-        self.mac = dnet_thread.eth.get()
+    def set_dumbnet(self, dumbnet_thread):
+        self.dumbnet = dumbnet_thread
+        self.mac = dumbnet_thread.eth.get()
 
     def get_eth_checks(self):
         return (self.check_eth, self.input_eth)
@@ -498,13 +498,13 @@ class mod_class(object):
 
     def input_eth(self, eth, timestamp):
         arp = dpkt.arp.ARP(str(eth.data))
-        mac = dnet.eth_ntoa(str(eth.src))
+        mac = dumbnet.eth_ntoa(str(eth.src))
         if self.flood_thread and self.flood_thread.is_alive():
             return
         if self.mac:
             if not eth.src == self.mac:
                 if arp.op == dpkt.arp.ARP_OP_REQUEST and arp.spa != arp.tpa:
-                    ip_dst = dnet.ip_ntoa(str(arp.tpa))
+                    ip_dst = dumbnet.ip_ntoa(str(arp.tpa))
                     for h in self.hosts:
                         if mac == h:
                             (ip_src, rand_mac_src, iter_src, reply_src) = self.hosts[mac]
@@ -518,17 +518,17 @@ class mod_class(object):
                                 _arp = dpkt.arp.ARP(    hrd=dpkt.arp.ARP_HRD_ETH,
                                                         pro=dpkt.arp.ARP_PRO_IP,
                                                         op=dpkt.arp.ARP_OP_REPLY,
-                                                        sha=dnet.eth_aton(rand_mac_dst),
+                                                        sha=dumbnet.eth_aton(rand_mac_dst),
                                                         spa=arp.tpa,
                                                         tha=arp.sha,
                                                         tpa=arp.spa
                                                         )
                                 _eth = dpkt.ethernet.Ethernet(  dst=arp.sha,
-                                                                src=dnet.eth_aton(rand_mac_dst),
+                                                                src=dumbnet.eth_aton(rand_mac_dst),
                                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                                 data=str(_arp)
                                                                 )
-                                self.dnet.send(str(_eth))
+                                self.dumbnet.send(str(_eth))
                                 break
                 #return #???
         for h in self.hosts:
@@ -537,7 +537,7 @@ class mod_class(object):
             (ip, random_mac, iter, reply) = self.hosts[h]
             if mac == random_mac:
                 return
-        ip = dnet.ip_ntoa(str(arp.spa))
+        ip = dumbnet.ip_ntoa(str(arp.spa))
         if ip == "0.0.0.0":
             return
         rand_mac = [ 0x00, random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff) ]
@@ -563,27 +563,27 @@ class mod_class(object):
             return (False, False)
 
     def input_ip(self, eth, ip, timestamp):
-        src = dnet.eth_ntoa(str(eth.src))
-        dst = dnet.eth_ntoa(str(eth.dst))
+        src = dumbnet.eth_ntoa(str(eth.src))
+        dst = dumbnet.eth_ntoa(str(eth.dst))
         
         good = False
         for h in self.hosts:
             (ip, rand_mac, iter, reply) = self.hosts[h]
             if src == h:
-                eth.src = dnet.eth_aton(rand_mac)
+                eth.src = dumbnet.eth_aton(rand_mac)
                 ref_src = h
                 if good:
-                    self.dnet.send(str(eth))
+                    self.dumbnet.send(str(eth))
                     if self.ui == 'gtk':
                         self.spoof_treestore.foreach(self.inc_packet_counter, (ref_src, ref_dst))
                     return
                 else:
                     good = True
             if dst == rand_mac:
-                eth.dst = dnet.eth_aton(h)
+                eth.dst = dumbnet.eth_aton(h)
                 ref_dst = h
                 if good:
-                    self.dnet.send(str(eth))
+                    self.dumbnet.send(str(eth))
                     if self.ui == 'gtk':
                         self.spoof_treestore.foreach(self.inc_packet_counter, (ref_src, ref_dst))
                     return
@@ -625,14 +625,14 @@ class mod_class(object):
                                 op=dpkt.arp.ARP_OP_REQUEST,
                                 sha=self.mac,
                                 spa=self.ip,
-                                tpa=dnet.ip_aton(str(i))
+                                tpa=dumbnet.ip_aton(str(i))
                                 )
-            eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton("ff:ff:ff:ff:ff:ff"),
+            eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton("ff:ff:ff:ff:ff:ff"),
                                             src=self.mac,
                                             type=dpkt.ethernet.ETH_TYPE_ARP,
                                             data=str(arp)
                                             )
-            self.dnet.eth.send(str(eth))
+            self.dumbnet.eth.send(str(eth))
             time.sleep(0.0001)
     
     def add_spoof(self):
@@ -646,12 +646,12 @@ class mod_class(object):
                 arp = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                     pro=dpkt.arp.ARP_PRO_IP,
                                     op=dpkt.arp.ARP_OP_REPLY,
-                                    sha=dnet.eth_aton(rand_mac_upper),
-                                    spa=dnet.ip_aton(ip_upper),
-                                    tpa=dnet.ip_aton(ip_lower)
+                                    sha=dumbnet.eth_aton(rand_mac_upper),
+                                    spa=dumbnet.ip_aton(ip_upper),
+                                    tpa=dumbnet.ip_aton(ip_lower)
                                     )
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_lower),
-                                                src=dnet.eth_aton(rand_mac_upper),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_lower),
+                                                src=dumbnet.eth_aton(rand_mac_upper),
                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                 data=str(arp)
                                                 )
@@ -659,12 +659,12 @@ class mod_class(object):
                 arp = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                     pro=dpkt.arp.ARP_PRO_IP,
                                     op=dpkt.arp.ARP_OP_REPLY,
-                                    sha=dnet.eth_aton(host_upper),
-                                    spa=dnet.ip_aton(ip_upper),
-                                    tpa=dnet.ip_aton(ip_lower)
+                                    sha=dumbnet.eth_aton(host_upper),
+                                    spa=dumbnet.ip_aton(ip_upper),
+                                    tpa=dumbnet.ip_aton(ip_lower)
                                     )
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_lower),
-                                                src=dnet.eth_aton(host_upper),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_lower),
+                                                src=dumbnet.eth_aton(host_upper),
                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                 data=str(arp)
                                                 )
@@ -673,12 +673,12 @@ class mod_class(object):
                 arp = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                     pro=dpkt.arp.ARP_PRO_IP,
                                     op=dpkt.arp.ARP_OP_REPLY,
-                                    sha=dnet.eth_aton(rand_mac_lower),
-                                    spa=dnet.ip_aton(ip_lower),
-                                    tpa=dnet.ip_aton(ip_upper)
+                                    sha=dumbnet.eth_aton(rand_mac_lower),
+                                    spa=dumbnet.ip_aton(ip_lower),
+                                    tpa=dumbnet.ip_aton(ip_upper)
                                     )
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_upper),
-                                                src=dnet.eth_aton(rand_mac_lower),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_upper),
+                                                src=dumbnet.eth_aton(rand_mac_lower),
                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                 data=str(arp)
                                                 )
@@ -686,12 +686,12 @@ class mod_class(object):
                 arp = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                     pro=dpkt.arp.ARP_PRO_IP,
                                     op=dpkt.arp.ARP_OP_REPLY,
-                                    sha=dnet.eth_aton(host_lower),
-                                    spa=dnet.ip_aton(ip_lower),
-                                    tpa=dnet.ip_aton(ip_upper)
+                                    sha=dumbnet.eth_aton(host_lower),
+                                    spa=dumbnet.ip_aton(ip_lower),
+                                    tpa=dumbnet.ip_aton(ip_upper)
                                     )
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_upper),
-                                                src=dnet.eth_aton(host_lower),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_upper),
+                                                src=dumbnet.eth_aton(host_lower),
                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                 data=str(arp)
                                                 )
@@ -772,7 +772,7 @@ class mod_class(object):
             if run:
                 self.spoofs[cur] = (False, data, org_data, hosts)
                 for j in org_data:
-                    self.dnet.eth.send(j)
+                    self.dumbnet.eth.send(j)
             for i in hosts:
                 (ip, rand_mac, iter, reply) = self.hosts[i]
                 self.hosts[i] = (ip, rand_mac, iter, False)

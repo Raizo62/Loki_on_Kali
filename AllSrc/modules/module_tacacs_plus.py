@@ -36,7 +36,7 @@ import tempfile
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 
 gobject = None
@@ -1013,11 +1013,11 @@ class mod_class(object):
         self.__log = log
     
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
         
     def get_tcp_checks(self):
         return (self.check_tcp, self.input_tcp)
@@ -1034,9 +1034,9 @@ class mod_class(object):
             data = header.parse(str(tcp.data))
             server = tcp.sport == TACACS_PLUS_PORT
             if server:
-                ident = "%s -> %s" % (dnet.ip_ntoa(ip.dst), dnet.ip_ntoa(ip.src))
+                ident = "%s -> %s" % (dumbnet.ip_ntoa(ip.dst), dumbnet.ip_ntoa(ip.src))
             else:
-                ident = "%s -> %s" % (dnet.ip_ntoa(ip.src), dnet.ip_ntoa(ip.dst))
+                ident = "%s -> %s" % (dumbnet.ip_ntoa(ip.src), dumbnet.ip_ntoa(ip.dst))
                 
             if not ident in self.peers:
                 encrypt = not (header.flags & tacacs_plus_header.FLAGS_UNENCRYPTED)

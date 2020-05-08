@@ -38,7 +38,7 @@ import tempfile
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 import IPy
 
@@ -418,12 +418,12 @@ class isis_thread(threading.Thread):
                     get_tlv(pdu, isis_tlv.TYPE_AUTHENTICATION).digest = struct.pack("!16s", mac.digest())
         data = pdu.render()
         llc = "\xfe\xfe\x03" + data
-        eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(ISIS_ALL_L1_IS_MAC if self.parent.level == isis_pdu_header.TYPE_L1_HELLO else ISIS_ALL_L2_IS_MAC),
+        eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(ISIS_ALL_L1_IS_MAC if self.parent.level == isis_pdu_header.TYPE_L1_HELLO else ISIS_ALL_L2_IS_MAC),
                                             src=self.parent.mac,
                                             type=len(llc),
                                             data=llc
                                             )
-        self.parent.dnet.send(str(eth_hdr))
+        self.parent.dumbnet.send(str(eth_hdr))
     
     def refresh_lsps(self, level, tblock):
         #neighbors
@@ -453,28 +453,28 @@ class isis_thread(threading.Thread):
             protos += "\xcc" #IP
         if "ip6_ll" in dir(self.parent) and not self.parent.ip6_ll is None:
             protos += "\x8e" #IP6
-        local_net = IPy.IP("%s/%s" % (dnet.ip_ntoa(self.parent.ip), dnet.ip_ntoa(self.parent.mask)), make_net=True)
+        local_net = IPy.IP("%s/%s" % (dumbnet.ip_ntoa(self.parent.ip), dumbnet.ip_ntoa(self.parent.mask)), make_net=True)
         ip_int_reach = "%s%s%s" % (struct.pack("!BBBB", 0x0a, 0x80, 0x80, 0x80),
-                                   dnet.ip_aton(str(local_net.net())),
-                                   dnet.ip_aton(str(local_net.netmask()))
+                                   dumbnet.ip_aton(str(local_net.net())),
+                                   dumbnet.ip_aton(str(local_net.netmask()))
                                    )
         for i in self.parent.nets:
             ip_int_reach += "%s%s%s" % (struct.pack("!BBBB", 0x0a, 0x80, 0x80, 0x80),
-                                        dnet.ip_aton(self.parent.nets[i]["net"]),
-                                        dnet.ip_aton(self.parent.nets[i]["mask"])
+                                        dumbnet.ip_aton(self.parent.nets[i]["net"]),
+                                        dumbnet.ip_aton(self.parent.nets[i]["mask"])
                                         )
         if not self.parent.loopback is None:
             ip_int_reach += "%s%s%s" % (struct.pack("!BBBB", 0x00, 0x80, 0x80, 0x80),
                                        self.parent.loopback,
                                        "\xff\xff\xff\xff"
                                        )
-        local_net6 = IPy.IP("%s/%s" % (dnet.ip6_ntoa(self.parent.ip6), self.parent.mask6), make_net=True)
+        local_net6 = IPy.IP("%s/%s" % (dumbnet.ip6_ntoa(self.parent.ip6), self.parent.mask6), make_net=True)
         ip6_int_reach = "%s%s" % (struct.pack("!IBB", 0x0a, 0x0, self.parent.mask6),
-                                  dnet.ip6_aton(str(local_net6.net()))[:self.parent.mask6//8]
+                                  dumbnet.ip6_aton(str(local_net6.net()))[:self.parent.mask6//8]
                                   )
         for i in self.parent.nets6:
             ip6_int_reach += "%s%s" % (struct.pack("!IBB", 0x0a, 0x0, int(self.parent.nets6[i]["mask"])),
-                                       dnet.ip6_aton(self.parent.nets6[i]["net"])[:int(self.parent.nets6[i]["mask"])//8]
+                                       dumbnet.ip6_aton(self.parent.nets6[i]["net"])[:int(self.parent.nets6[i]["mask"])//8]
                                        )
         ip6_int_reach += "%s%s" % (struct.pack("!IBB", 0x00, 0x0, 128),
                                        self.parent.loopback6
@@ -514,7 +514,7 @@ class isis_thread(threading.Thread):
     
     def run(self):
         while(self.running):
-            if self.parent.dnet:
+            if self.parent.dumbnet:
                 if self.parent.level == isis_pdu_header.TYPE_L1_HELLO:
                     lsp_level = isis_pdu_header.TYPE_L1_LINK_STATE
                     csnp_level = isis_pdu_header.TYPE_L1_COMPLETE_SEQUENCE
@@ -651,7 +651,7 @@ class mod_class(object):
             #~ if i.startswith("AUTH_"):
                 #~ exec("val = isis_tlv_authentication." + i)
                 #~ self.auth_type_liststore.append([i, val])
-        self.dnet = None
+        self.dumbnet = None
         self.thread = None
         self.mtu = 1514
         self.sleep_time = 1
@@ -774,18 +774,18 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
-        self.mask = dnet.ip_aton(mask)
+        self.ip = dumbnet.ip_aton(ip)
+        self.mask = dumbnet.ip_aton(mask)
 
     def set_ip6(self, ip6, mask6, ip6_ll, mask6_ll):
-        self.ip6 = dnet.ip6_aton(ip6)
+        self.ip6 = dumbnet.ip6_aton(ip6)
         self.mask6 = len(IPy.IP(mask6).strBin().replace("0", ""))
-        self.ip6_ll = dnet.ip6_aton(ip6_ll)
+        self.ip6_ll = dumbnet.ip6_aton(ip6_ll)
         self.mask6_ll = len(IPy.IP(mask6_ll).strBin().replace("0", ""))
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     def set_int(self, interface):
         self.interface = interface
@@ -794,15 +794,15 @@ class mod_class(object):
         return (self.check_eth, self.input_eth)
 
     def check_eth(self, eth):
-        if eth.dst == dnet.eth_aton(ISIS_ALL_L1_IS_MAC) or eth.dst == dnet.eth_aton(ISIS_ALL_L2_IS_MAC):
+        if eth.dst == dumbnet.eth_aton(ISIS_ALL_L1_IS_MAC) or eth.dst == dumbnet.eth_aton(ISIS_ALL_L2_IS_MAC):
             return (True, True)
         return (False, False)
         
     def input_eth(self, eth, timestamp):
         if eth.src != self.mac:
             data = str(eth.data)[3:]
-            if eth.dst == dnet.eth_aton(ISIS_ALL_L1_IS_MAC) or eth.dst == dnet.eth_aton(ISIS_ALL_L2_IS_MAC):
-                if eth.dst == dnet.eth_aton(ISIS_ALL_L1_IS_MAC):
+            if eth.dst == dumbnet.eth_aton(ISIS_ALL_L1_IS_MAC) or eth.dst == dumbnet.eth_aton(ISIS_ALL_L2_IS_MAC):
+                if eth.dst == dumbnet.eth_aton(ISIS_ALL_L1_IS_MAC):
                     neighbors = self.neighbors_l1
                     level = "L1: "
                 else:
@@ -825,7 +825,7 @@ class mod_class(object):
                         cur["hello"] = hello
                         with gtk.gdk.lock:
                             cur["iter"] = self.neighbor_treestore.append(None, [
-                                                                        level + dnet.eth_ntoa(eth.src), 
+                                                                        level + dumbnet.eth_ntoa(eth.src), 
                                                                         hello.source_id.encode("hex"), 
                                                                         str(get_tlv(hello, isis_tlv.TYPE_AREA_ADDRESS)),
                                                                         auth, 
@@ -834,7 +834,7 @@ class mod_class(object):
                                                                     ])
                         cur["lsps"] = {}
                         
-                        self.log("ISIS: Got new peer %s" % (dnet.eth_ntoa(eth.src)))
+                        self.log("ISIS: Got new peer %s" % (dumbnet.eth_ntoa(eth.src)))
                         neighbors[eth.src] = cur
                     else:
                         neighbors[eth.src]["hello"] = hello
@@ -894,14 +894,14 @@ class mod_class(object):
                             prefixes = tlv.v
                             while len(prefixes) > 0:
                                 lsp_new['ip_reach'].append({ 'metric'   :   ord(prefixes[0]),
-                                                             'prefix'   :   dnet.ip_ntoa(prefixes[4:8]),
-                                                             'mask'     :   dnet.ip_ntoa(prefixes[8:12])
+                                                             'prefix'   :   dumbnet.ip_ntoa(prefixes[4:8]),
+                                                             'mask'     :   dumbnet.ip_ntoa(prefixes[8:12])
                                                              })
                                 with gtk.gdk.lock:
                                     self.neighbor_treestore.append(new["iter"], [
                                                                     "IP reachability",
                                                                     "%d" % ord(prefixes[0]),
-                                                                    dnet.ip_ntoa(prefixes[4:8]) + " / " + dnet.ip_ntoa(prefixes[8:12]),
+                                                                    dumbnet.ip_ntoa(prefixes[4:8]) + " / " + dumbnet.ip_ntoa(prefixes[8:12]),
                                                                     "",
                                                                     "",
                                                                     {}
@@ -913,14 +913,14 @@ class mod_class(object):
                             while len(prefixes) > 0:
                                 metric,prefixlen = struct.unpack("!IxB", prefixes[:6])
                                 lsp_new['ip6_reach'].append({ 'metric'   :   metric,
-                                                              'prefix'   :   dnet.ip6_ntoa(prefixes[6:6+(prefixlen//8)]+"\x00"*(16-(prefixlen//8))),
+                                                              'prefix'   :   dumbnet.ip6_ntoa(prefixes[6:6+(prefixlen//8)]+"\x00"*(16-(prefixlen//8))),
                                                               'mask'     :   prefixlen
                                                               })
                                 with gtk.gdk.lock:
                                     self.neighbor_treestore.append(new["iter"], [
                                                                     "IP6 reachability",
                                                                     "%d" % metric,
-                                                                    "%s/%d" % (dnet.ip6_ntoa(prefixes[6:6+(prefixlen//8)]+"\x00"*(16-(prefixlen//8))), prefixlen),
+                                                                    "%s/%d" % (dumbnet.ip6_ntoa(prefixes[6:6+(prefixlen//8)]+"\x00"*(16-(prefixlen//8))), prefixlen),
                                                                     "",
                                                                     "",
                                                                     {}
@@ -983,11 +983,11 @@ class mod_class(object):
             self.loopback6 = None
             for i in self.loopback_entry.get_text().split(","):
                 try:
-                    self.loopback = dnet.ip_aton(i.strip())
+                    self.loopback = dumbnet.ip_aton(i.strip())
                 except:
                     self.loopback = None
                     try:
-                        self.loopback6 = dnet.ip6_aton(i.strip())
+                        self.loopback6 = dumbnet.ip6_aton(i.strip())
                     except:
                         self.loopback6 = None
             self.auth_secret = self.auth_data_entry.get_text()
@@ -1004,12 +1004,12 @@ class mod_class(object):
         net = self.network_entry.get_text()
         mask = self.netmask_entry.get_text()
         try:
-            dnet.ip_aton(net)
-            dnet.ip_aton(mask)
+            dumbnet.ip_aton(net)
+            dumbnet.ip_aton(mask)
             nets = self.nets
         except:
             try:
-                dnet.ip6_aton(net)
+                dumbnet.ip6_aton(net)
                 if int(mask) > 128 or int(mask) < 0:
                     raise
                 nets = self.nets6

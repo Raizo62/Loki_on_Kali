@@ -33,7 +33,7 @@ import threading
 import time
 import struct
 
-import dnet
+import dumbnet
 import pcap
 import dpkt
 
@@ -62,7 +62,7 @@ class redirect_thread(threading.Thread):
             self.d.send(data)
 
     def run(self):
-        self.d = dnet.eth(self.parent.interface)
+        self.d = dumbnet.eth(self.parent.interface)
         p = pcap.pcapObject()
         p.open_live(self.parent.interface, 1600, 1, 100)
         if not self.parent.platform == "Darwin":
@@ -198,8 +198,8 @@ class mod_class(object):
         return (False, False)
 
     def input_eth(self, eth, timestamp):
-        src = dnet.eth_ntoa(eth.src)
-        dst = dnet.eth_ntoa(eth.dst)
+        src = dumbnet.eth_ntoa(eth.src)
+        dst = dumbnet.eth_ntoa(eth.dst)
         data = eth.data
         src_dst = src + ":" + dst
         if src_dst not in self.peers:

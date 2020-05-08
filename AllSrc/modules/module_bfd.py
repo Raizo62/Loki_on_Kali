@@ -37,7 +37,7 @@ import threading
 import hashlib
 import time
 
-import dnet
+import dumbnet
 import dpkt
 
 gobject = None
@@ -464,8 +464,8 @@ class mod_class(object):
     def set_log(self, log):
         self.__log = log
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
 
     def set_fw(self, fw):
         self.fw = fw
@@ -473,11 +473,11 @@ class mod_class(object):
     def set_int(self, interface):
         self.interface = interface
         self.bfd_filter = {     "device"    : self.interface,
-                                "op"        : dnet.FW_OP_BLOCK,
-                                "dir"       : dnet.FW_DIR_IN,
+                                "op"        : dumbnet.FW_OP_BLOCK,
+                                "dir"       : dumbnet.FW_DIR_IN,
                                 "proto"     : dpkt.ip.IP_PROTO_UDP,
-                                "src"       : dnet.addr("0.0.0.0/0", dnet.ADDR_TYPE_IP),
-                                "dst"       : dnet.addr("0.0.0.0/0", dnet.ADDR_TYPE_IP),
+                                "src"       : dumbnet.addr("0.0.0.0/0", dumbnet.ADDR_TYPE_IP),
+                                "dst"       : dumbnet.addr("0.0.0.0/0", dumbnet.ADDR_TYPE_IP),
                                 "sport"     : [0, 0],
                                 "dport"     : [BFD_PORT, BFD_PORT]
                                 }
@@ -493,8 +493,8 @@ class mod_class(object):
     def input_udp(self, eth, ip, udp, timestamp):
         packet = bfd_control_packet()
         packet.parse(udp.data)
-        src = dnet.ip_ntoa(ip.src)
-        dst = dnet.ip_ntoa(ip.dst)
+        src = dumbnet.ip_ntoa(ip.src)
+        dst = dumbnet.ip_ntoa(ip.dst)
         id = "%s:%s" % (src, dst)
         id_rev = "%s:%s" % (dst, src)
         auth = "None"
@@ -561,7 +561,7 @@ class mod_class(object):
                                                     type=dpkt.ethernet.ETH_TYPE_IP,
                                                     data=str(ip_hdr)
                                                     )
-                self.dnet.send(str(eth_hdr))
+                self.dumbnet.send(str(eth_hdr))
             elif dos and packet.state > bfd_control_packet.STATE_DOWN:
                 packet.state = bfd_control_packet.STATE_DOWN
                 tmp = packet.your_discrim
@@ -585,7 +585,7 @@ class mod_class(object):
                                                     type=dpkt.ethernet.ETH_TYPE_IP,
                                                     data=str(ip_hdr)
                                                     )
-                self.dnet.send(str(eth_hdr))
+                self.dumbnet.send(str(eth_hdr))
 
     def activate_filter(self):
         if not self.filter:

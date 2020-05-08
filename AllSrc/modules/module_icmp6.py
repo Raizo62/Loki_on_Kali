@@ -35,7 +35,7 @@ import time
 
 import dpkt
 import pcap
-import dnet
+import dumbnet
 import struct
 
 import IPy
@@ -85,12 +85,12 @@ class spoof_thread(threading.Thread):
     def run(self):
         self.parent.log("ICMP6: Spoof thread started")        
         while self.running:
-            if self.parent.dnet:
+            if self.parent.dumbnet:
                 for iter in self.parent.spoofs:
                     (run, entry, org_data, hosts) = self.parent.spoofs[iter]
                     if run:
                         for data in entry:
-                            self.parent.dnet.send(data)
+                            self.parent.dumbnet.send(data)
                             time.sleep(0.001)
             for x in xrange(self.parent.spoof_delay):
                 if not self.running:
@@ -104,7 +104,7 @@ class spoof_thread(threading.Thread):
                 (run, data, org_data, hosts) = self.parent.spoofs[i]
                 if run:
                     for j in org_data:
-                        self.parent.dnet.eth.send(j)
+                        self.parent.dumbnet.eth.send(j)
         self.parent.log("ICMP6: Spoof thread terminated")
 
     def wakeup(self):
@@ -205,7 +205,7 @@ class mod_class(object):
                         childclass = SpoofNode_
                     return childclass(childdata, parent=self, key=key, depth=childdepth)
             self.SpoofParentNode = SpoofParentNode_
-        self.dnet = None
+        self.dumbnet = None
         self.spoof_thread = None
         self.macs = None
         self.mac = None
@@ -407,7 +407,7 @@ class mod_class(object):
             if run:
                 self.spoofs[spoof] = (False, data, org_data, hosts)
                 for j in org_data:
-                    self.dnet.eth.send(j)
+                    self.dumbnet.eth.send(j)
             for i in hosts:
                 (ip, rand_mac, iter, reply) = self.hosts[i]
                 self.hosts[i] = (ip, rand_mac, iter, False)
@@ -477,19 +477,19 @@ class mod_class(object):
         self.__log = log
 
     def set_ip6(self, ip, mask, ip_ll, mask_ll):
-        self.ip = dnet.ip6_aton(ip)
+        self.ip = dumbnet.ip6_aton(ip)
         self.ip6_ll = ip_ll
         self.mask6_ll = mask_ll
 
-    def set_dnet(self, dnet_thread):
-        self.dnet = dnet_thread
-        self.mac = dnet_thread.eth.get()
+    def set_dumbnet(self, dumbnet_thread):
+        self.dumbnet = dumbnet_thread
+        self.mac = dumbnet_thread.eth.get()
 
     def get_ip6_checks(self):
         return (self.check_ip6, self.input_ip6)
 
     def check_ip6(self, ip6):
-        if dnet.ip6_ntoa(ip6.src) == "::":
+        if dumbnet.ip6_ntoa(ip6.src) == "::":
             return (False, False)
         return (True, False)
 
@@ -499,10 +499,10 @@ class mod_class(object):
         
         if ip6.nxt == dpkt.ip.IP_PROTO_ICMP6:
             icmp6 = dpkt.icmp6.ICMP6(str(ip6.data))
-            mac = dnet.eth_ntoa(str(eth.src))
+            mac = dumbnet.eth_ntoa(str(eth.src))
             if self.mac:
                 if icmp6.type == dpkt.icmp6.ND_NEIGHBOR_SOLICIT:
-                    ip6_dst = dnet.ip6_ntoa(str(icmp6.data)[4:20])
+                    ip6_dst = dumbnet.ip6_ntoa(str(icmp6.data)[4:20])
                     for h in self.hosts:
                         if mac == h:
                             (ip6_src, rand_mac_src, iter_src, reply_src) = self.hosts[mac]
@@ -513,14 +513,14 @@ class mod_class(object):
                             if reply_src and reply_dst:
                                 _icmp6 = dpkt.icmp6.ICMP6(  type=dpkt.icmp6.ND_NEIGHBOR_SOLICIT,
                                                             code=0,
-                                                            data=struct.pack("!L16sBB6s", 0x60000000, dnet.ip6_aton(ip6_dst), 1, 1, rand_mac_dst)
+                                                            data=struct.pack("!L16sBB6s", 0x60000000, dumbnet.ip6_aton(ip6_dst), 1, 1, rand_mac_dst)
                                                             )
                                 _eth = dpkt.ethernet.Ethernet(  dst=eth.src,
-                                                                src=dnet.eth_aton(rand_mac_dst),
+                                                                src=dumbnet.eth_aton(rand_mac_dst),
                                                                 type=dpkt.ip.IP_PROTO_IP6,
                                                                 data=str(_icmp6)
                                                                 )
-                                self.dnet.send(str(_eth))
+                                self.dumbnet.send(str(_eth))
                                 break
             if icmp6.type == dpkt.icmp6.ND_ROUTER_ADVERT:
                 if mac in self.hosts:
@@ -533,7 +533,7 @@ class mod_class(object):
                 (ip, random_mac, iter, reply) = self.hosts[h]
                 if mac == random_mac:
                     return
-            ip = dnet.ip6_ntoa(ip6.src)
+            ip = dumbnet.ip6_ntoa(ip6.src)
             if ip == "::":
                 return            
             rand_mac = [ 0x00, random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff), random.randint(0x00, 0xff) ]
@@ -543,7 +543,7 @@ class mod_class(object):
             elif self.ui == 'urw':
                 self.hostlist.append(self.parent.menu_button("%s(%s) - %s" % (mac, self.mac_to_vendor(mac), ip), self.urw_hostlist_activated, mac))
                 iter = None
-            self.hosts[mac] = (dnet.ip6_ntoa(ip6.src), rand_mac, iter, False)
+            self.hosts[mac] = (dumbnet.ip6_ntoa(ip6.src), rand_mac, iter, False)
             if self.ui == 'gtk':
                 self.mappings_liststore.append([mac, rand_mac])
 
@@ -562,26 +562,26 @@ class mod_class(object):
         return (False, False)
 
     def input_eth(self, eth, timestamp):
-        src = dnet.eth_ntoa(str(eth.src))
-        dst = dnet.eth_ntoa(str(eth.dst))
+        src = dumbnet.eth_ntoa(str(eth.src))
+        dst = dumbnet.eth_ntoa(str(eth.dst))
         good = False
         for h in self.hosts:
             (ip, rand_mac, iter, reply) = self.hosts[h]
             if src == h:
-                eth.src = dnet.eth_aton(rand_mac)
+                eth.src = dumbnet.eth_aton(rand_mac)
                 ref_src = h
                 if good:
-                    self.dnet.send(str(eth))
+                    self.dumbnet.send(str(eth))
                     if self.ui == 'gtk':
                         self.spoof_treestore.foreach(self.inc_packet_counter, (ref_src, ref_dst))
                     return
                 else:
                     good = True
             if dst == rand_mac:
-                eth.dst = dnet.eth_aton(h)
+                eth.dst = dumbnet.eth_aton(h)
                 ref_dst = h
                 if good:
-                    self.dnet.send(str(eth))
+                    self.dumbnet.send(str(eth))
                     if self.ui == 'gtk':
                         self.spoof_treestore.foreach(self.inc_packet_counter, (ref_src, ref_dst))
                     return
@@ -626,8 +626,8 @@ class mod_class(object):
                                     data=echo6
                                     )
         icmp6_str = str(icmp6)
-        ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(self.ip6_ll),
-                            dst=dnet.ip6_aton("ff02::1"),
+        ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(self.ip6_ll),
+                            dst=dumbnet.ip6_aton("ff02::1"),
                             nxt=dpkt.ip.IP_PROTO_ICMP6,
                             hlim=64,
                             data=icmp6,
@@ -639,11 +639,11 @@ class mod_class(object):
         ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, ip6.plen, ip6.nxt)
         icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
         eth = dpkt.ethernet.Ethernet(   src=self.mac,
-                                        dst=dnet.eth_aton("33:33:00:00:00:01"),
+                                        dst=dumbnet.eth_aton("33:33:00:00:00:01"),
                                         data=str(ip6),
                                         type=dpkt.ethernet.ETH_TYPE_IP6
                                         )
-        self.dnet.send(str(eth))
+        self.dumbnet.send(str(eth))
         
     def invalid_header(self):
         echo6 = dpkt.icmp6.ICMP6.Echo(  id=1234,
@@ -657,8 +657,8 @@ class mod_class(object):
         icmp6_str = str(icmp6)
         rand = "".join([ chr(random.randint(0x00, 0xff)) for i in xrange(14) ])
         data_str = struct.pack("!BB14s", dpkt.ip.IP_PROTO_ICMP6, 1, rand) + icmp6_str
-        ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(self.ip6_ll),
-                            dst=dnet.ip6_aton("ff02::1"),
+        ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(self.ip6_ll),
+                            dst=dumbnet.ip6_aton("ff02::1"),
                             nxt=159,
                             hlim=64,
                             plen=len(data_str)
@@ -672,11 +672,11 @@ class mod_class(object):
         data_str = struct.pack("!BB14s", dpkt.ip.IP_PROTO_ICMP6, 1, rand) + icmp6_str
         ip6.data = data_str
         eth = dpkt.ethernet.Ethernet(   src=self.mac,
-                                        dst=dnet.eth_aton("33:33:00:00:00:01"),
+                                        dst=dumbnet.eth_aton("33:33:00:00:00:01"),
                                         data=str(ip6),
                                         type=dpkt.ethernet.ETH_TYPE_IP6
                                         )
-        self.dnet.send(str(eth))
+        self.dumbnet.send(str(eth))
 
     def invalid_option(self):
         echo6 = dpkt.icmp6.ICMP6.Echo(  id=1234,
@@ -688,8 +688,8 @@ class mod_class(object):
                                     data=echo6
                                     )
         icmp6_str = str(icmp6)
-        ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(self.ip6_ll),
-                            dst=dnet.ip6_aton("ff02::1"),
+        ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(self.ip6_ll),
+                            dst=dumbnet.ip6_aton("ff02::1"),
                             nxt=dpkt.ip.IP_PROTO_HOPOPTS,
                             hlim=1,
                             data=icmp6,
@@ -704,12 +704,12 @@ class mod_class(object):
         ip6.plen = ip6.plen + len(str(hopopt))
         ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, len(icmp6_str), dpkt.ip.IP_PROTO_ICMP6)
         icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-        eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton("33:33:00:00:00:01"),
+        eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton("33:33:00:00:00:01"),
                                         src=self.mac,
                                         data=str(ip6),
                                         type=dpkt.ethernet.ETH_TYPE_IP6
                                         )
-        self.dnet.send(str(eth))
+        self.dumbnet.send(str(eth))
     
     
     def add_spoof(self):
@@ -721,14 +721,14 @@ class mod_class(object):
             for host_lower in self.lower_add:
                 (ip_lower, rand_mac_lower, iter_lower) = self.lower_add[host_lower]
                 
-                advert = struct.pack("!I16sBB6s", 0x60000000, dnet.ip6_aton(ip_upper), 2, 1, dnet.eth_aton(rand_mac_upper))
+                advert = struct.pack("!I16sBB6s", 0x60000000, dumbnet.ip6_aton(ip_upper), 2, 1, dumbnet.eth_aton(rand_mac_upper))
                 icmp6 = dpkt.icmp6.ICMP6(   type=dpkt.icmp6.ND_NEIGHBOR_ADVERT,
                                             code=0,
                                             data=advert
                                             )
                 icmp6_str = str(icmp6)
-                ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(ip_upper),
-                                    dst=dnet.ip6_aton(ip_lower),
+                ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(ip_upper),
+                                    dst=dumbnet.ip6_aton(ip_lower),
                                     nxt=dpkt.ip.IP_PROTO_ICMP6,
                                     hlim=255,
                                     data=icmp6,
@@ -739,20 +739,20 @@ class mod_class(object):
                     ip6.extension_hdrs[i]=None
                 ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, ip6.plen, ip6.nxt)
                 icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_lower),
-                                                src=dnet.eth_aton(rand_mac_upper),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_lower),
+                                                src=dumbnet.eth_aton(rand_mac_upper),
                                                 data=str(ip6),
                                                 type=dpkt.ethernet.ETH_TYPE_IP6
                                                 )
                 data.append(str(eth))
-                advert = struct.pack("!I16sBB6s", 0x60000000, dnet.ip6_aton(ip_lower), 2, 1, dnet.eth_aton(host_upper))
+                advert = struct.pack("!I16sBB6s", 0x60000000, dumbnet.ip6_aton(ip_lower), 2, 1, dumbnet.eth_aton(host_upper))
                 icmp6 = dpkt.icmp6.ICMP6(   type=dpkt.icmp6.ND_NEIGHBOR_ADVERT,
                                             code=0,
                                             data=advert
                                             )
                 icmp6_str = str(icmp6)
-                ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(ip_upper),
-                                    dst=dnet.ip6_aton(ip_lower),
+                ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(ip_upper),
+                                    dst=dumbnet.ip6_aton(ip_lower),
                                     nxt=dpkt.ip.IP_PROTO_ICMP6,
                                     hlim=255,
                                     data=icmp6,
@@ -763,22 +763,22 @@ class mod_class(object):
                     ip6.extension_hdrs[i]=None
                 ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, ip6.plen, ip6.nxt)
                 icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_lower),
-                                                src=dnet.eth_aton(host_upper),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_lower),
+                                                src=dumbnet.eth_aton(host_upper),
                                                 data=str(ip6),
                                                 type=dpkt.ethernet.ETH_TYPE_IP6
                                                 )
                 org_data.append(str(eth))
                 
 
-                advert = struct.pack("!I16sBB6s", 0x60000000, dnet.ip6_aton(ip_lower), 2, 1, dnet.eth_aton(rand_mac_lower))
+                advert = struct.pack("!I16sBB6s", 0x60000000, dumbnet.ip6_aton(ip_lower), 2, 1, dumbnet.eth_aton(rand_mac_lower))
                 icmp6 = dpkt.icmp6.ICMP6(   type=dpkt.icmp6.ND_NEIGHBOR_ADVERT,
                                             code=0,
                                             data=advert
                                             )
                 icmp6_str = str(icmp6)
-                ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(ip_lower),
-                                    dst=dnet.ip6_aton(ip_upper),
+                ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(ip_lower),
+                                    dst=dumbnet.ip6_aton(ip_upper),
                                     nxt=dpkt.ip.IP_PROTO_ICMP6,
                                     hlim=255,
                                     data=icmp6,
@@ -789,20 +789,20 @@ class mod_class(object):
                     ip6.extension_hdrs[i]=None
                 ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, ip6.plen, ip6.nxt)
                 icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_upper),
-                                                src=dnet.eth_aton(rand_mac_lower),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_upper),
+                                                src=dumbnet.eth_aton(rand_mac_lower),
                                                 data=str(ip6),
                                                 type=dpkt.ethernet.ETH_TYPE_IP6
                                                 )
                 data.append(str(eth))
-                advert = struct.pack("!I16sBB6s", 0x60000000, dnet.ip6_aton(ip_lower), 2, 1, dnet.eth_aton(host_lower))
+                advert = struct.pack("!I16sBB6s", 0x60000000, dumbnet.ip6_aton(ip_lower), 2, 1, dumbnet.eth_aton(host_lower))
                 icmp6 = dpkt.icmp6.ICMP6(   type=dpkt.icmp6.ND_NEIGHBOR_ADVERT,
                                             code=0,
                                             data=advert
                                             )
                 icmp6_str = str(icmp6)
-                ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(ip_lower),
-                                    dst=dnet.ip6_aton(ip_upper),
+                ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(ip_lower),
+                                    dst=dumbnet.ip6_aton(ip_upper),
                                     nxt=dpkt.ip.IP_PROTO_ICMP6,
                                     hlim=255,
                                     data=icmp6,
@@ -813,8 +813,8 @@ class mod_class(object):
                     ip6.extension_hdrs[i]=None
                 ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, ip6.plen, ip6.nxt)
                 icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-                eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(host_upper),
-                                                src=dnet.eth_aton(host_lower),
+                eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(host_upper),
+                                                src=dumbnet.eth_aton(host_lower),
                                                 data=str(ip6),
                                                 type=dpkt.ethernet.ETH_TYPE_IP6
                                                 )
@@ -822,14 +822,14 @@ class mod_class(object):
                 
             hosts.append(host_upper)
 
-            mld = struct.pack("!xxHBBH16s", 1, 4, 0, 0, dnet.ip6_aton("ff02::1:ff00:0000")[:13] + dnet.ip6_aton(ip_upper)[13:])
+            mld = struct.pack("!xxHBBH16s", 1, 4, 0, 0, dumbnet.ip6_aton("ff02::1:ff00:0000")[:13] + dumbnet.ip6_aton(ip_upper)[13:])
             icmp6 = dpkt.icmp6.ICMP6(   type=143,
                                         code=0,
                                         data=mld
                                         )
             icmp6_str = str(icmp6)
-            ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(ip_upper),
-                                dst=dnet.ip6_aton("ff02::16"),
+            ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(ip_upper),
+                                dst=dumbnet.ip6_aton("ff02::16"),
                                 nxt=dpkt.ip.IP_PROTO_HOPOPTS,
                                 hlim=1,
                                 data=icmp6,
@@ -843,24 +843,24 @@ class mod_class(object):
             ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, len(icmp6_str), 
             dpkt.ip.IP_PROTO_ICMP6)
             icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-            eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton("33:33:00:00:00:16"),
+            eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton("33:33:00:00:00:16"),
                                             src=self.mac,
                                             data=str(ip6),
                                             type=dpkt.ethernet.ETH_TYPE_IP6
                                             )
-            self.dnet.send(str(eth))
-            self.log("ICMP6: Joined multicast group " + dnet.ip6_ntoa(dnet.ip6_aton("ff02::1:ff00:0000")[:13] + dnet.ip6_aton(ip_upper)[13:]))
+            self.dumbnet.send(str(eth))
+            self.log("ICMP6: Joined multicast group " + dumbnet.ip6_ntoa(dumbnet.ip6_aton("ff02::1:ff00:0000")[:13] + dumbnet.ip6_aton(ip_upper)[13:]))
         for host_lower in self.lower_add:
             hosts.append(host_lower)
             (ip_lower, rand_mac_lower, iter_lower) = self.lower_add[host_lower]
-            mld = struct.pack("!xxHBBH16s", 1, 4, 0, 0, dnet.ip6_aton("ff02::1:ff00:0000")[:13] + dnet.ip6_aton(ip_lower)[13:])
+            mld = struct.pack("!xxHBBH16s", 1, 4, 0, 0, dumbnet.ip6_aton("ff02::1:ff00:0000")[:13] + dumbnet.ip6_aton(ip_lower)[13:])
             icmp6 = dpkt.icmp6.ICMP6(   type=143,
                                         code=0,
                                         data=mld
                                         )
             icmp6_str = str(icmp6)
-            ip6 = dpkt.ip6.IP6( src=dnet.ip6_aton(ip_lower),
-                                dst=dnet.ip6_aton("ff02::16"),
+            ip6 = dpkt.ip6.IP6( src=dumbnet.ip6_aton(ip_lower),
+                                dst=dumbnet.ip6_aton("ff02::16"),
                                 nxt=dpkt.ip.IP_PROTO_HOPOPTS,
                                 hlim=1,
                                 data=icmp6,
@@ -874,13 +874,13 @@ class mod_class(object):
             ip6_pseudo = struct.pack('!16s16sIxxxB', ip6.src, ip6.dst, len(icmp6_str), 
             dpkt.ip.IP_PROTO_ICMP6)
             icmp6.sum = ichecksum_func(ip6_pseudo + icmp6_str)
-            eth = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton("33:33:00:00:00:16"),
+            eth = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton("33:33:00:00:00:16"),
                                             src=self.mac,
                                             data=str(ip6),
                                             type=dpkt.ethernet.ETH_TYPE_IP6
                                             )
-            self.dnet.send(str(eth))
-            self.log("ICMP6: Joined multicast group " + dnet.ip6_ntoa(dnet.ip6_aton("ff02::1:ff00:0000")[:13] + dnet.ip6_aton(ip_lower)[13:]))
+            self.dumbnet.send(str(eth))
+            self.log("ICMP6: Joined multicast group " + dumbnet.ip6_ntoa(dumbnet.ip6_aton("ff02::1:ff00:0000")[:13] + dumbnet.ip6_aton(ip_lower)[13:]))
         self.upper_add = {}
         self.lower_add = {}
         return (data, org_data, hosts)
@@ -954,7 +954,7 @@ class mod_class(object):
             if run:
                 self.spoofs[cur] = (False, data, org_data, hosts)
                 for j in org_data:
-                    self.dnet.eth.send(j)
+                    self.dumbnet.eth.send(j)
             for i in hosts:
                 (ip, rand_mac, iter, reply) = self.hosts[i]
                 self.hosts[i] = (ip, rand_mac, iter, False)

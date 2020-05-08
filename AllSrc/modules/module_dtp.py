@@ -36,7 +36,7 @@ import struct
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 
 gobject = None
@@ -116,7 +116,7 @@ class dtp_tlv(object):
                     return "ISL"
                 return "Unknown"    #todo: get more trunk states ?
             elif self.t == self.TYPE_SENDER:
-                return dnet.eth_ntoa(self.v)
+                return dumbnet.eth_ntoa(self.v)
         except:
             pass
         return "%d, %d, %s" % (self.t, self.l, self.v.encode("hex"))
@@ -159,12 +159,12 @@ class dtp_thread(threading.Thread):
                                         dtp_tlv(0x4, self.parent.mac)
                                      ] )
                 pkg = "\xaa\xaa\x03\x00\x00\x0c\x20\x04" + pdu.render()
-                eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(DTP_DEST_MAC),
+                eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(DTP_DEST_MAC),
                                                     src=self.parent.mac,
                                                     type=len(pkg),
                                                     data=pkg
                                                     )
-                self.parent.dnet.send(str(eth_hdr))
+                self.parent.dumbnet.send(str(eth_hdr))
                 timer = 0
             timer = timer + 1
             time.sleep(1)
@@ -317,23 +317,23 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
         
     def get_eth_checks(self):
         return (self.check_eth, self.input_eth)
     
     def check_eth(self, eth):
-        if dnet.eth_ntoa(str(eth.dst)) == DTP_DEST_MAC:
+        if dumbnet.eth_ntoa(str(eth.dst)) == DTP_DEST_MAC:
             return (True, True)
         return (False, False)
         
     def input_eth(self, eth, timestamp):
         if not eth.src == self.mac:
-            src = dnet.eth_ntoa(str(eth.src))
+            src = dumbnet.eth_ntoa(str(eth.src))
             pdu = dtp_pdu()
             pdu.parse(str(eth.data)[8:])
             domain = pdu.get_tlv(dtp_tlv.TYPE_DOMAIN)

@@ -33,7 +33,7 @@ import struct
 import threading
 import time
 
-import dnet
+import dumbnet
 import dpkt
 
 import gobject
@@ -252,21 +252,21 @@ class glbp_thread(threading.Thread):
                     ip_hdr = dpkt.ip.IP(    ttl=255,
                                             p=dpkt.ip.IP_PROTO_UDP,
                                             src=self.parent.ip,
-                                            dst=dnet.ip_aton(GLBP_MULTICAST_ADDRESS),
+                                            dst=dumbnet.ip_aton(GLBP_MULTICAST_ADDRESS),
                                             data=str(udp_hdr)
                                             )
                     ip_hdr.len += len(ip_hdr.data)
-                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dnet.eth_aton(GLBP_MULTICAST_MAC),
+                    eth_hdr = dpkt.ethernet.Ethernet(   dst=dumbnet.eth_aton(GLBP_MULTICAST_MAC),
                                                         src=self.parent.mac,
                                                         type=dpkt.ethernet.ETH_TYPE_IP,
                                                         data=str(ip_hdr)
                                                         )
-                    self.parent.dnet.send(str(eth_hdr))
+                    self.parent.dumbnet.send(str(eth_hdr))
                     if arp:
                         if arp < 4:
                             src_mac = self.parent.mac
-                            brdc_mac = dnet.eth_aton("ff:ff:ff:ff:ff:ff")
-                            stp_uplf_mac = dnet.eth_aton("01:00:0c:cd:cd:cd")
+                            brdc_mac = dumbnet.eth_aton("ff:ff:ff:ff:ff:ff")
+                            stp_uplf_mac = dumbnet.eth_aton("01:00:0c:cd:cd:cd")
                             ip = hello.addr #struct.pack("!I", hello.addr)
                             arp_hdr = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                                 pro=dpkt.arp.ARP_PRO_IP,
@@ -281,7 +281,7 @@ class glbp_thread(threading.Thread):
                                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                                 data=str(arp_hdr)
                                                                 )
-                            self.parent.dnet.send(str(eth_hdr))
+                            self.parent.dumbnet.send(str(eth_hdr))
 
                             arp_hdr = dpkt.arp.ARP( hrd=dpkt.arp.ARP_HRD_ETH,
                                                 pro=dpkt.arp.ARP_PRO_IP,
@@ -296,7 +296,7 @@ class glbp_thread(threading.Thread):
                                                                 type=dpkt.ethernet.ETH_TYPE_ARP,
                                                                 data=str(arp_hdr)
                                                                 )
-                            self.parent.dnet.send(str(eth_hdr))
+                            self.parent.dumbnet.send(str(eth_hdr))
                         self.parent.peers[i] = (iter, pkg, hello, req_resp, auth, state, arp - 1)
             time.sleep(1)
         self.parent.log("GLBP: Thread terminated")
@@ -383,11 +383,11 @@ class mod_class(object):
         self.__log = log
 
     def set_ip(self, ip, mask):
-        self.ip = dnet.ip_aton(ip)
+        self.ip = dumbnet.ip_aton(ip)
 
-    def set_dnet(self, dnet):
-        self.dnet = dnet
-        self.mac = dnet.eth.get()
+    def set_dumbnet(self, dumbnet):
+        self.dumbnet = dumbnet
+        self.mac = dumbnet.eth.get()
 
     def get_udp_checks(self):
         return (self.check_udp, self.input_udp)
@@ -432,7 +432,7 @@ class mod_class(object):
                     #~ print "type: %d len: %d" % (tlv.tlv_type, tlv.tlv_length)
                     data = data[tlv.tlv_length:]
             try:
-                src = dnet.ip_ntoa(ip.src)
+                src = dumbnet.ip_ntoa(ip.src)
             except:
                 pass
             
@@ -441,11 +441,11 @@ class mod_class(object):
                 for i in req_resp:
                     if not i in req_resp_old:
                         req_resp_old.append(i)
-                        self.treestore.append(iter, ["", "", i.weight, dnet.eth_ntoa(i.vmac), ""])
+                        self.treestore.append(iter, ["", "", i.weight, dumbnet.eth_ntoa(i.vmac), ""])
             else:
-                iter = self.treestore.append(None, [src, dnet.ip_ntoa(hello.addr), hello.prio, "Seen", auth_str])
+                iter = self.treestore.append(None, [src, dumbnet.ip_ntoa(hello.addr), hello.prio, "Seen", auth_str])
                 for req in req_resp:
-                    self.treestore.append(iter, ["", "", req.weight, dnet.eth_ntoa(req.vmac), ""])
+                    self.treestore.append(iter, ["", "", req.weight, dumbnet.eth_ntoa(req.vmac), ""])
                 self.peers[ip.src] = (iter, pkg, hello, req_resp, auth, False, False)
                 self.log("GLBP: Got new peer %s" % (src))
 
@@ -456,7 +456,7 @@ class mod_class(object):
         (model, paths) = select.get_selected_rows()
         for i in paths:
             iter = model.get_iter(i)
-            peer = dnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
+            peer = dumbnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
             (iter, pkg, hello, req_resp, auth, run, arp) = self.peers[peer]
             if self.arp_checkbutton.get_active():
                 arp = 13
@@ -472,7 +472,7 @@ class mod_class(object):
         (model, paths) = select.get_selected_rows()
         for i in paths:
             iter = model.get_iter(i)
-            peer = dnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
+            peer = dumbnet.ip_aton(model.get_value(iter, self.STORE_SRC_ROW))
             (iter, pkg, hello, req_resp, auth, run, arp) = self.peers[peer]
             self.peers[peer] = (iter, pkg, hello, req_resp, auth, False, arp)
             model.set_value(iter, self.STORE_STATE_ROW, "Released")

@@ -48,7 +48,7 @@ import struct
 import ConfigParser
 
 import dpkt
-import dnet
+import dumbnet
 import IPy
 
 import loki
@@ -419,7 +419,7 @@ class network_window(object):
         self.br_treestore[path][self.BR_INT_ROW] = text
         self.add_interfaces_store(text)
         try:
-            mac = dnet.eth_ntoa(self.devices[text]["mac"])
+            mac = dumbnet.eth_ntoa(self.devices[text]["mac"])
             self.br_treestore[path][self.BR_MAC_ROW] = mac
         except:
             pass
@@ -578,7 +578,7 @@ class network_window(object):
     
     def check_macaddress(self, address):
         try:
-            dnet.eth_aton(address)
+            dumbnet.eth_aton(address)
         except:
             self.msg("MAC Address invalid")
             return False
@@ -586,10 +586,10 @@ class network_window(object):
     
     def check_address(self, address):
         try:
-            dnet.ip_aton(address)
+            dumbnet.ip_aton(address)
         except:
             try:
-                dnet.ip6_aton(address)
+                dumbnet.ip6_aton(address)
             except:
                 self.msg("Address invalid")
                 return False
@@ -614,7 +614,7 @@ class network_window(object):
             for i in paths:
                 dev = self.select_device()
                 if not dev is None:
-                    self.br_treestore.append(model.get_iter(i), [dev, dnet.eth_ntoa(self.devices[dev]["mac"]), "", "", True, True, False, False, False])
+                    self.br_treestore.append(model.get_iter(i), [dev, dumbnet.eth_ntoa(self.devices[dev]["mac"]), "", "", True, True, False, False, False])
         else:
             self.br_treestore.append(None, ["br23", "00:01:02:03:04:05", "0.0.0.0", "0.0.0.0", True, True, True, True, True])
 
@@ -1144,18 +1144,18 @@ class network_window(object):
         devs = loki.pcap.findalldevs()
         for (name, descr, addr, flags) in devs:
             try:
-                test = dnet.eth(name)
+                test = dumbnet.eth(name)
                 mac = test.get()
                 devices[name] = { 'mac' : mac, 'ip4' : [], 'ip6' : [], 'descr' : descr, 'flags' : flags }
             except:
                 pass
             else:
                 self.add_interfaces_store(name)
-                self.add_macaddresses_store(dnet.eth_ntoa(mac))
+                self.add_macaddresses_store(dumbnet.eth_ntoa(mac))
                 if len(addr) > 1:
                     for (ip, mask, net, gw) in addr:
                         try:
-                            dnet.ip_aton(ip)
+                            dumbnet.ip_aton(ip)
                             addr_dict = {}
                             addr_dict['ip'] = ip
                             self.add_addresses_store(ip)
@@ -1167,7 +1167,7 @@ class network_window(object):
                         except:
                             pass                            
                         try:
-                            dnet.ip6_aton(ip)
+                            dumbnet.ip6_aton(ip)
                             addr_dict = {}
                             addr_dict['ip'] = ip
                             self.add_addresses_store(ip)
@@ -1753,10 +1753,10 @@ class loki_gtk(loki.codename_loki):
                 btn.set_active(False)
                 return
             self.pcap_thread = loki.pcap_thread(self, self.interface)
-            self.dnet_thread = loki.dnet_thread(self.interface)
+            self.dumbnet_thread = loki.dumbnet_thread(self.interface)
             self.log("Listening on %s" % (self.interface))
             if PLATFORM != "Linux":
-                self.fw = dnet.fw()
+                self.fw = dumbnet.fw()
             for i in self.modules:
                 self.start_module(i)
             for i in self.notebook:
@@ -1767,7 +1767,7 @@ class loki_gtk(loki.codename_loki):
                 i.set_property("sensitive", True)
             self.network_button.set_property("sensitive", False)
             self.open_togglebutton.set_property("sensitive", False)
-            self.dnet_thread.start()
+            self.dumbnet_thread.start()
             self.pcap_thread.start()
         else:
             for i in self.modules:
@@ -1782,9 +1782,9 @@ class loki_gtk(loki.codename_loki):
             if self.pcap_thread:
                 self.pcap_thread.quit()
                 self.pcap_thread = None
-            if self.dnet_thread:
-                self.dnet_thread.quit()
-                self.dnet_thread = None
+            if self.dumbnet_thread:
+                self.dumbnet_thread.quit()
+                self.dumbnet_thread = None
             self.network_button.set_property("sensitive", True)
             self.open_togglebutton.set_property("sensitive", True)
 
