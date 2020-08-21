@@ -1,5 +1,5 @@
 # Loki_on_Kali
-Packages to install Loki on Kali Linux. Loki is a python based infrastructure pentesting tool focussing on layer 3 protocols.
+Packages to install Loki on Kali Linux / Parrot-OS. Loki is a python based infrastructure pentesting tool focussing on layer 3 protocols.
 
 # Installation
 
