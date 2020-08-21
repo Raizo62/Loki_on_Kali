@@ -19,7 +19,7 @@ dpkg -i Local_Packages/*.deb
 ```
 
 ## Install Loki
-`dpkg -i loki_0.3.0-r502-2_amd64.deb`
+`dpkg -i loki_0.3.0-r502-3_amd64.deb`
 
 # Play
 ```
