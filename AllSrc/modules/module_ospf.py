@@ -945,7 +945,7 @@ class ospf_thread(threading.Thread):
                                                                         ospf_link_state_advertisement_header.TYPE_ROUTER_LINKS,
                                                                         self.parent.ip,
                                                                         self.parent.ip,
-                                                                        10
+                                                                        1
                                                                         )
                             l_data = lsa.render("")
                             data = packet.render(l_data)
