@@ -4,8 +4,6 @@ Packages to install Loki on Kali Linux / Parrot-OS. Loki is a python based infra
 # Installation
 
 ## Install dependencies
-## Install needed old packages
-`dpkg -i Needed_Old_Packages/*.deb`
 
 ### With apt
 
@@ -36,9 +34,20 @@ sudo rm /etc/apt/sources.list.d/loki_tmp_qXgv80VVlRK8.list
 sudo apt-get update
 ```
 
-* with local packages :
+### With local packages
+
+* Go to the folder "Local_Packages" :
+
+`cd Local_Packages`
+
+* Install the necessary packages (in the correct order) :
+
+`sudo bash ./install.sh`
+
+* Return to the Loki package :
+
 ```
-dpkg -i Local_Packages/*.deb
+cd ..
 ```
 
 ## Install Loki
