@@ -51,13 +51,14 @@ cd ..
 ```
 
 ## Install Loki
-`dpkg -i loki_0.3.0-r502-3_amd64.deb`
+
+`sudo dpkg -i loki_0.3.0-r502-3_amd64.deb`
 
 # Play
 ```
-loki_gtk.py
+sudo loki_gtk.py
 ```
 or
 ```
-loki_urw.py
+sudo loki_urw.py
 ```
