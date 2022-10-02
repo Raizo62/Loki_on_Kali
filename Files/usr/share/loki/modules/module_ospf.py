@@ -250,7 +250,7 @@ class ospf_hello(ospf_header):
     #+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     #|                              ...                              |
 
-    OPTION_TOS_CAPABILITY = 0x1
+    OPTION_TOS_CAPABILITY = 0x0
     OPTION_EXTERNAL_ROUTING_CAPABILITY = 0x2
     OPTION_CONTAINS_LSS = 0x10
     OPTION_DEMAND_CIRCUITS = 0x20
