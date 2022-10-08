@@ -52,7 +52,7 @@ cd ..
 
 ## Install Loki
 
-`sudo dpkg -i loki_0.3.0-r502-3_amd64.deb`
+`sudo dpkg -i loki_0.3.0-r502-5_amd64.deb`
 
 # Play
 ```
