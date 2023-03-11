@@ -1,64 +1,38 @@
 # Loki_on_Kali
-Packages to install Loki on Kali Linux / Parrot-OS. Loki is a python based infrastructure pentesting tool focussing on layer 3 protocols.
+Docker container to run Loki on Kali Linux / Parrot-OS. Loki is a python based infrastructure pentesting tool focussing on layer 3 protocols.
 
 # Installation
 
-## Install dependencies
+## Image
 
-### With apt
+### Build your own image
 
-* Create a temporary source list :
-```
-/usr/bin/cat << EOF | sudo tee /etc/apt/sources.list.d/loki_tmp_qXgv80VVlRK8.list > /dev/null
-deb http://deb.debian.org/debian/ buster main
-deb http://deb.debian.org/debian-security/ buster/updates main
-deb http://deb.debian.org/debian/ buster-updates main
-
-deb http://deb.debian.org/debian/ bullseye main
-deb http://deb.debian.org/debian/ bullseye-updates main
-EOF
-```
-
-* Update :
-
-`sudo apt-get update`
-
-* Install dependency :
-
-`sudo apt-get install libdumbnet1 python-libpcap python-gtk2 python-dpkt python-dumbnet python-ipy python-glade2 python-urwid`
-
-* Remove the temporary source list :
+* Build the container :
 
 ```
-sudo rm /etc/apt/sources.list.d/loki_tmp_qXgv80VVlRK8.list
-sudo apt-get update
+cd Docker
+sudo ./build.sh
 ```
 
-### With local packages
+## Launchers
 
-* Go to the folder "Local_Packages" :
-
-`cd Local_Packages`
-
-* Install the necessary packages (in the correct order) :
-
-`sudo bash ./install.sh`
-
-* Return to the Loki package :
+* Copy launchers in /usr/local/sbin :
 
 ```
-cd ..
+chmod u+x Docker/run_loki_*.sh
+sudo cp Docker/run_loki_*.sh /usr/local/sbin
 ```
-
-## Install Loki
-
-`sudo dpkg -i loki_0.3.0-r502-5_amd64.deb`
 
 # Play
 ```
-sudo loki_gtk.py
+sudo run_loki_gtk.sh
 ```
 or
 ```
-sudo loki_urw.py
+sudo run_loki_urw.sh
+```
+or
+```
+sudo run_loki_bash.sh
+# To run loki, use the command "loki_gtk.py"
 ```
