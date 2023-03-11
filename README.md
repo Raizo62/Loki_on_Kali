@@ -14,6 +14,20 @@ cd Docker
 sudo ./build.sh
 ```
 
+### Import from github
+
+* Import the image :
+
+`sudo docker pull ghcr.io/raizo62/loki_on_kali:latest`
+
+* Rename the image to use the launchers
+
+`sudo docker image tag ghcr.io/raizo62/loki_on_kali loki_on_kali`
+
+* Delete the old name of the image
+
+`sudo docker rmi ghcr.io/raizo62/loki_on_kali`
+
 ## Launchers
 
 * Copy launchers in /usr/local/sbin :
