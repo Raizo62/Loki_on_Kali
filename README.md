@@ -5,7 +5,7 @@ Docker container to run Loki on Kali Linux / Parrot-OS. Loki is a python based i
 
 ## Image
 
-### Build your own image
+### Method 1 : Build your own image
 
 * Build the container :
 
@@ -14,7 +14,7 @@ cd Docker
 sudo ./build.sh
 ```
 
-### Import from github
+### Method 2 : Import from github
 
 * Import the image :
 
