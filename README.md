@@ -38,6 +38,9 @@ sudo cp Docker/run_loki_*.sh /usr/local/sbin
 ```
 
 # Play
+
+* Start Loki :
+
 ```
 sudo run_loki_gtk.sh
 ```
@@ -50,3 +53,5 @@ or
 sudo run_loki_bash.sh
 # To run loki, use the command "loki_gtk.py"
 ```
+
+* The shared folder between Loki and the Host is '/tmp'
