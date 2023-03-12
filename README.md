@@ -30,6 +30,23 @@ sudo ./build.sh
 
 `sudo docker rmi ghcr.io/raizo62/loki_on_kali`
 
+### Method 3 : Download the file of the image
+
+* Get the compressed image :
+
+`wget https://github.com/Raizo62/Loki_on_Kali/releases/download/v1/loki_on_kali_image_v1.docker.tgz`
+
+* Unzip the file :
+
+```
+tar xvf loki_on_kali_image_v1.docker.tgz
+rm loki_on_kali_image_v1.docker.tgz
+```
+
+* Import the image :
+
+`sudo docker load -i loki_on_kali_image_v1.docker`
+
 ## Launchers
 
 * Copy launchers in /usr/local/sbin :
