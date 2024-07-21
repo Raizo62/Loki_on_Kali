@@ -47,6 +47,10 @@ rm loki_on_kali_image_v2.docker.tgz
 
 `sudo docker load -i loki_on_kali_image_v2.docker`
 
+* Delete the unnecessary docker file :
+
+`rm loki_on_kali_image_v2.docker`
+
 ## Launchers
 
 * Copy launchers in /usr/local/sbin :
