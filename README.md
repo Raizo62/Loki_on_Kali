@@ -45,7 +45,7 @@ rm loki_on_kali_image_v2.docker.tgz
 
 * Import the image :
 
-`sudo docker load -i loki_on_kali_image_v2.docker`
+`sudo docker load --input=loki_on_kali_image_v2.docker`
 
 * Delete the unnecessary docker file :
 
