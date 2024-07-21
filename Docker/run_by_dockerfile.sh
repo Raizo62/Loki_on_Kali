@@ -5,6 +5,13 @@ LOKI_FILE="loki_0.3.0-r502-5_amd64.deb"
 APT_FLAGS="-q -y --no-install-recommends"
 DEBIAN_FRONTEND=noninteractive
 
+echo "* Stretch Debian : apt uses archived repository"
+cat > /etc/apt/sources.list <<EOF
+deb http://archive.debian.org/debian/ stretch main contrib non-free
+deb http://archive.debian.org/debian/ stretch-proposed-updates main contrib non-free
+deb http://archive.debian.org/debian-security stretch/updates main contrib non-free
+EOF
+
 echo "* Install dependency"
 install_packages \
 	libdumbnet1 python-libpcap python-gtk2 python-dpkt python-dumbnet python-ipy python-glade2 python-urwid \
@@ -36,7 +43,7 @@ apt-get ${APT_FLAGS} purge wget
 # clean :
 apt-get ${APT_FLAGS} autoremove
 apt-get ${APT_FLAGS} clean
-rm -r /var/lib/apt/lists /var/cache/apt/archives
+rm -r /var/cache/apt/archives
 find /var/log/ -type f -exec truncate -s 0 \{\} \;
 # last clean :
 rm $(basename $0)
