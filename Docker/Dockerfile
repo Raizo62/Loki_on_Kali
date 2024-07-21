@@ -1,4 +1,4 @@
-FROM bitnami/minideb:buster
+FROM bitnami/minideb:stretch
 
 LABEL version="1.0" maintainer="Raizo62 <https://github.com/Raizo62>"
 
