@@ -28,6 +28,7 @@ echo "* Configure loki"
 
 # used by loki :
 mkdir -p /root/.local/share
+mkdir -p /root/.loki
 
 # update file with mac vendor :
 wget --quiet --no-check-certificate https://github.com/wireshark/wireshark/raw/master/manuf -O mac_vendor.txt
