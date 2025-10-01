@@ -15,7 +15,7 @@ EOF
 echo "* Install dependency"
 install_packages \
 	libdumbnet1 python-libpcap python-gtk2 python-dpkt python-dumbnet python-ipy python-glade2 python-urwid \
-	iptables bridge-utils \
+	iptables ebtables bridge-utils \
 	ifupdown \
 	wget
 
