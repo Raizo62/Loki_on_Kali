@@ -477,7 +477,10 @@ class mod_class(object):
         self.__log = log
 
     def set_ip6(self, ip, mask, ip_ll, mask_ll):
-        self.ip = dumbnet.ip6_aton(ip)
+        if ip is not None:
+            self.ip = dumbnet.ip6_aton(ip)
+        else:
+            self.ip = None
         self.ip6_ll = ip_ll
         self.mask6_ll = mask_ll
 

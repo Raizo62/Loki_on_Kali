@@ -1520,11 +1520,12 @@ class mod_class(object):
                 if header.type == ospf_header.TYPE_HELLO:
                     hello = ospf_hello()
                     hello.parse(data)
-                    (ip_int,) = struct.unpack("!I", self.ip)
+                    (my_router_id,) = struct.unpack("!I", self.ip)
                     if id not in self.neighbors:
-                        #self.log("OSPF-DEBUG: %d < %d ?" % (hello.id, ip_int))
-                        #if socket.ntohl(hello.id) < socket.ntohl(ip_int):
-                        if hello.id < ip_int:
+                        # Correct comparison: Neighbor Router ID vs Local Router ID
+                        # header.id is already an integer from ospf_header.parse()
+                        neighbor_router_id = header.id  # Neighbor Router ID (already an integer)
+                        if neighbor_router_id < my_router_id:
                             master = True
                             #self.log("OSPF-DEBUG: Yes")
                         else:
@@ -1693,7 +1694,8 @@ class mod_class(object):
                                 elif self.ui == 'urw':
                                     self.neigh_tree['children'][iter]['state'] = "EXCHANGE"
                                     self.urw_update_tree()
-                            elif not dbd.flags and master:
+                            elif not dbd.flags & ospf_database_description.FLAGS_MORE:
+                                # Transition to LOADING when no more DBD packets to exchange
                                 self.neighbors[id] = (iter, mac, src, org_dbd, lsa, ospf_thread.STATE_LOADING, master, seq, ip.data, adverts)
                                 if self.ui == 'gtk':
                                     self.neighbor_liststore.set_value(iter, self.NEIGH_STATE_ROW, "LOADING")

@@ -778,10 +778,22 @@ class mod_class(object):
         self.mask = dumbnet.ip_aton(mask)
 
     def set_ip6(self, ip6, mask6, ip6_ll, mask6_ll):
-        self.ip6 = dumbnet.ip6_aton(ip6)
-        self.mask6 = len(IPy.IP(mask6).strBin().replace("0", ""))
-        self.ip6_ll = dumbnet.ip6_aton(ip6_ll)
-        self.mask6_ll = len(IPy.IP(mask6_ll).strBin().replace("0", ""))
+        if ip6 is not None:
+            self.ip6 = dumbnet.ip6_aton(ip6)
+        else:
+            self.ip6 = None
+        if mask6 is not None:
+            self.mask6 = len(IPy.IP(mask6).strBin().replace("0", ""))
+        else:
+            self.mask6 = None
+        if ip6_ll is not None:
+            self.ip6_ll = dumbnet.ip6_aton(ip6_ll)
+        else:
+            self.ip6_ll = None
+        if mask6_ll is not None:
+            self.mask6_ll = len(IPy.IP(mask6_ll).strBin().replace("0", ""))
+        else:
+            self.mask6_ll = None
 
     def set_dumbnet(self, dumbnet):
         self.dumbnet = dumbnet
