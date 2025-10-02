@@ -1,6 +1,6 @@
 #/bin/bash
 
-LOKI_FILE="loki_0.3.0-r502-5_amd64.deb"
+LOKI_FILE="loki_0.3.0-r502-6_amd64.deb"
 
 APT_FLAGS="-q -y --no-install-recommends"
 DEBIAN_FRONTEND=noninteractive
