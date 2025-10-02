@@ -34,22 +34,22 @@ sudo sh ./build.sh
 
 * Get the compressed image :
 
-`wget https://github.com/Raizo62/Loki_on_Kali/releases/download/v2/loki_on_kali_image_v2.docker.tgz`
+`wget https://github.com/Raizo62/Loki_on_Kali/releases/download/v3/loki_on_kali_image_v3.docker.tgz`
 
 * Unzip the file :
 
 ```
-tar xvf loki_on_kali_image_v2.docker.tgz
-rm loki_on_kali_image_v2.docker.tgz
+tar xvf loki_on_kali_image_v3.docker.tgz
+rm loki_on_kali_image_v3.docker.tgz
 ```
 
 * Import the image :
 
-`sudo docker load --input=loki_on_kali_image_v2.docker`
+`sudo docker load --input=loki_on_kali_image_v3.docker`
 
 * Delete the unnecessary docker file :
 
-`rm loki_on_kali_image_v2.docker`
+`rm loki_on_kali_image_v3.docker`
 
 ## Launchers
 
