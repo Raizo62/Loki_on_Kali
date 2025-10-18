@@ -78,3 +78,36 @@ sudo run_loki_bash.sh
 ```
 
 * The shared folder between Loki and the Host is '/tmp'
+
+# Network config of Loki by GUI
+
+## Step 1: Access Advanced Interface Configuration
+
+1. Click on **"Network"**.
+2. Click on **"Advanced Interface Config"**.
+
+## Step 2: Create and Configure the Bridge (br23)
+
+1. In the **"Bridge Config"** tab:
+    * Click **"Add"**.
+        * This creates a bridge named **"br23"**.
+    * Set the **IP address** (**"Address"**) and **netmask** (**"Netmask"**) for the bridge.
+
+## Step 3: Add a Network Interface to the Bridge
+
+1. Select the line with the **"br23"** bridge.
+2. Click **"Add"**.
+    * Select the network interface (e.g., **"eth0"**) of Loki.
+    * Click **"OK"**.
+
+## Step 4: Apply and Exit Configuration
+
+1. Click **"Run"**.
+2. Click **"Cancel"** (to close the Bridge Config window).
+3. Click **"Cancel"** (to close the Advanced Interface Config window).
+
+## Step 5: Finalize Network Interface Selection
+
+1. Click on **"Network"** again.
+2. Select the **"br23"** interface.
+3. Click **"OK"**.
