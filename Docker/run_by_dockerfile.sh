@@ -31,8 +31,13 @@ mkdir -p /root/.local/share
 mkdir -p /root/.loki
 
 # update file with mac vendor :
-wget --quiet --no-check-certificate https://github.com/wireshark/wireshark/raw/master/manuf -O mac_vendor.txt
-grep --extended-regexp --ignore-case '^[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}[[:space:]]' mac_vendor.txt | awk '{print $1 " " $2}' | tr ':' '-' > /usr/share/loki/modules/mac.txt
+FILE_MAC_OUI="https://www.wireshark.org/download/automated/data/manuf"
+if ! wget --quiet --no-check-certificate "${FILE_MAC_OUI}" -O mac_vendor.txt
+then
+	echo "Error : file not found : '${FILE_MAC_OUI}'"
+else
+	grep --extended-regexp --ignore-case '^[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}[[:space:]]' mac_vendor.txt | awk '{print $1 " " $2}' | tr ':' '-' > /usr/share/loki/modules/mac.txt
+fi
 rm mac_vendor.txt
 
 echo "* Cleaning"
